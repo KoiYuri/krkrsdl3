@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cfloat>
 
+// 速度慢到不能接受
 namespace TVPImageUtils {
 
 // ======================================================================
@@ -486,15 +487,15 @@ inline void WarpPerspectiveRGBA(
     double invDet = 1.0 / det;
     
     // Inverse matrix
-    double invA = (e*1 - f*h) * invDet;
-    double invB = (c*h - b*1) * invDet;
-    double invC = (b*f - c*e) * invDet;
-    double invD = (f*g - d*1) * invDet;
-    double invE = (a*1 - c*g) * invDet;
-    double invF = (c*d - a*f) * invDet;
-    double invG = (d*h - e*g) * invDet;
-    double invH = (b*g - a*h) * invDet;
-    double invI = (a*e - b*d) * invDet;
+    double invA = (e * 1 - f * h) * invDet;
+    double invB = (f * g - d * 1) * invDet;
+    double invC = (d * h - e * g) * invDet;
+    double invD = (c * h - b * 1) * invDet;
+    double invE = (a * 1 - c * g) * invDet;
+    double invF = (b * g - a * h) * invDet;
+    double invG = (b * f - c * e) * invDet;
+    double invH = (c * d - a * f) * invDet;
+    double invI = (a * e - b * d) * invDet;
     
     for (int y = 0; y < dstH; ++y)
     {
@@ -502,10 +503,23 @@ inline void WarpPerspectiveRGBA(
         for (int x = 0; x < dstW; ++x)
         {
             // Apply inverse perspective transform
-            double denom = invG * x + invH * y + invI;
-            if (fabs(denom) < 1e-15) denom = 1e-15;
-            float sx = (float)((invA * x + invB * y + invC) / denom);
-            float sy = (float)((invD * x + invE * y + invF) / denom);
+            double cx = x + 0.5;
+            double cy = y + 0.5;
+            double denom = invG * cx + invH * cy + invI;
+            if (fabs(denom) < 1e-12)
+            {
+                *(uint32_t*)dline = 0;
+                dline += 4;
+                continue;
+            }
+            float sx = (float)((invA * cx + invB * cy + invC) / denom);
+            float sy = (float)((invD * cx + invE * cy + invF) / denom);
+            if (sx < 0.5f || sx >= srcW - 0.5f || sy < 0.5f || sy >= srcH - 0.5f)
+            {
+                *(uint32_t*)dline = 0;
+                dline += 4;
+                continue;
+            }
 
             uint32_t pixel;
             if (mode == 0)

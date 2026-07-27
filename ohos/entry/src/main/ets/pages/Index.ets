@@ -43,7 +43,10 @@ struct Index {
                 },
                 (full: boolean): void => {
                     window.getLastWindow(ctx).then((win: window.Window): void => {
-                        try { win.setFullScreen(full); } catch (e) {}
+                        try {
+                            win.setWindowLayoutFullScreen(full);
+                            win.setWindowSystemBarEnable([]);
+                        } catch (e) {}
                     });
                 },
                 (show: boolean, _x: number, _y: number, _w: number, _h: number): void => {

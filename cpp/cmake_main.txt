@@ -124,7 +124,7 @@ if(OHOS)
         ${OHOS_DEPS}/lib/libplutovg.a
     )
     # glad not needed — OHOS uses sysroot EGL/GLES3 directly
-else()
+elseif(USE_FFMPEG)
     find_package(FFMPEG REQUIRED)
     target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS})
     target_link_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARY_DIRS})

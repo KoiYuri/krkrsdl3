@@ -3064,6 +3064,8 @@ public:
         iTVPTexture2D* src = textures[0].first;
         const tTVPPointD* srcpt = textures[0].second;
         if (nTriangles == 2 && CheckQuad(pttar) && CheckTextureQuad(textures))
+        // 这种绕弯的方案，包括之前采用opencv的方案，似乎并没有使渲染速度得到提高
+        // 反倒是krkrz原版，即else路径，速度飞快(DC5PH)，这段代码的实用性再观察一段时间
         {
             bool isSrcRect =
                 isDoubleEqual(srcpt[0].y, srcpt[1].y) && isDoubleEqual(srcpt[1].x, srcpt[5].x) &&
