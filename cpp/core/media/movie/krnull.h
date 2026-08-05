@@ -10,16 +10,15 @@
 #pragma once
 
 #include "PlatformVideo.h"
-#include "tjsNativeVideoOverlay.h"
 
 // ─── NullOverlayPlayer ──────────────────────────────────────
 class NullOverlayPlayer : public iTVPVideoOverlay
 {
-    tTJSNI_VideoOverlay* m_cb;
+    iTVPVideoCallback* m_cb;
     uint32_t ref = 1;
 
 public:
-    NullOverlayPlayer(tTJSNI_VideoOverlay* cb) : m_cb(cb) {}
+    NullOverlayPlayer(iTVPVideoCallback* cb) : m_cb(cb) {}
 
     void AddRef() override { ref++; }
     void Release() override
@@ -122,11 +121,11 @@ public:
 // ─── NullLayerPlayer ────────────────────────────────────────
 class NullLayerPlayer : public iTVPVideoOverlay, public tTVPContinuousEventCallbackIntf
 {
-    tTJSNI_VideoOverlay* m_cb;
+    iTVPVideoCallback* m_cb;
     uint32_t ref = 1;
 
 public:
-    NullLayerPlayer(tTJSNI_VideoOverlay* cb) : m_cb(cb) {}
+    NullLayerPlayer(iTVPVideoCallback* cb) : m_cb(cb) {}
     ~NullLayerPlayer() { TVPRemoveContinuousEventHook(this); }
 
     void AddRef() override { ref++; }

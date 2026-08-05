@@ -486,7 +486,21 @@ void TVPGetLocalFileListAt(const ttstr& name,
             info.ModifyTime = st.st_mtime;
             info.CreationTime = st.st_ctime;
             info.Mode = S_ISREG(st.st_mode) ? S_IFREG : (S_ISDIR(st.st_mode) ? S_IFDIR : 0);
-            cb(ttstr(de->d_name), &info);
+
+            ttstr lowerFilename(de->d_name);
+            // Lowercase the filename for case-insensitive auto-path lookup.
+            // NormalizePathName lowercases all lookup keys, so stored keys must match.
+            {
+                tjs_char* p = lowerFilename.Independ();
+                while (*p)
+                {
+                    if (*p >= TJS_N('A') && *p <= TJS_N('Z'))
+                        *p += TJS_N('a') - TJS_N('A');
+                    p++;
+                }
+            }
+            
+            cb(lowerFilename, &info);
         }
     }
     closedir(d);

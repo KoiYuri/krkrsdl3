@@ -10,8 +10,6 @@ extern "C"
 #include "CodecVideo.h"
 #include "PlatformAudio.h"
 
-#include "tjsNativeVideoOverlay.h"
-
 NS_KRMOVIE_BEGIN
 #define DRAW_VIDEO_FRAME 30
 
@@ -105,7 +103,7 @@ void MoviePlayerOverlay::SetWindow(tTJSNI_Window* window)
     TVPAddContinuousEventHook(this);
 }
 
-void MoviePlayerOverlay::BuildGraph(tTJSNI_VideoOverlay* callbackwin,
+void MoviePlayerOverlay::BuildGraph(iTVPVideoCallback* callbackwin,
                                     tTJSBinaryStream* stream,
                                     const tjs_char* streamname,
                                     const tjs_char* type,
@@ -115,11 +113,6 @@ void MoviePlayerOverlay::BuildGraph(tTJSNI_VideoOverlay* callbackwin,
     m_pPlayer->SetCallback(std::bind(&MoviePlayerOverlay::OnPlayEvent, this, std::placeholders::_1,
                                      std::placeholders::_2));
     m_pPlayer->OpenFromStream(stream, streamname, type, size);
-}
-
-const tTVPRect& MoviePlayerOverlay::GetBounds()
-{
-    return m_pCallbackWin->GetBounds();
 }
 
 void KRMovie::MoviePlayerOverlay::SetVisible(bool b)

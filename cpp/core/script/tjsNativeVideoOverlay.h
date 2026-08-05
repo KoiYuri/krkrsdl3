@@ -3,6 +3,7 @@
 #include "ComplexRect.h"
 #include "UtilStreams.h"
 #include "NativeEventQueue.h"
+#include "krmovie.h"
 #include "tjsNative.h"
 #include "tjsNativeWaveSoundBuffer.h"
 
@@ -70,7 +71,7 @@ public:
 // tTJSNI_VideoOverlay : VideoOverlay Native Instance
 //---------------------------------------------------------------------------
 class iTVPVideoOverlay;
-class tTJSNI_VideoOverlay : public tTJSNI_BaseVideoOverlay
+class tTJSNI_VideoOverlay : public tTJSNI_BaseVideoOverlay, public iTVPVideoCallback
 {
     typedef tTJSNI_BaseVideoOverlay inherited;
 
@@ -242,10 +243,9 @@ public:
     void SetRectOffset(tjs_int ofsx, tjs_int ofsy);
     void DetachVideoOverlay();
 
-    void PostEvent(const NativeEvent& ev) { EventQueue.PostEvent(ev); }
-
 public:
-    void WndProc(NativeEvent& ev);
+    virtual void PostEvent(const NativeEvent& ev) { EventQueue.PostEvent(ev); }
+    virtual void WndProc(NativeEvent& ev);
     // UtilWindow's window procedure
     void ClearWndProcMessages(); // clear WndProc's message queue
 };

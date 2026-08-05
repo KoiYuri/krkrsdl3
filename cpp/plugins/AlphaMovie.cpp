@@ -1,17 +1,23 @@
 #include "ncbind/ncbind.hpp"
 
 #include "TVPStorage.h"
-#include "gl/tvpgl.h"
 #include "tjsNativeLayer.h"
 
-extern "C"
-{
-#include "libswscale/swscale.h"
 #include <zlib.h>
-#define XMD_H
-#include <jpeglib.h>
-#include <jerror.h>
-}
+
+typedef long JLONG;
+typedef short JCOEF;
+typedef JCOEF* JCOEFPTR;
+typedef unsigned char JSAMPLE;
+typedef JSAMPLE* JSAMPROW;
+#define DCTSIZE 8
+#define DCTSIZE2 64
+const int jpeg_natural_order[DCTSIZE2 + 16] = {
+    0,  1,  8,  16, 9,  2,  3,  10, 17, 24, 32, 25, 18, 11, 4,  5,  12, 19, 26, 33,
+    40, 48, 41, 34, 27, 20, 13, 6,  7,  14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36,
+    29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54,
+    47, 55, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63};
+
 struct BufferManager
 {
     uint32_t* buffer = nullptr;
@@ -31,7 +37,6 @@ struct BufferManager
 
         buffer = new uint32_t[bufferLen];
         memcpy(buffer, indata, inLen);
-        ;
 
         bit_buffer = ((uint32_t)buffer[0] << 24) | ((uint32_t)indata[1] << 16) |
                      ((uint32_t)indata[2] << 8) | (uint32_t)indata[3];
@@ -325,12 +330,7 @@ static void EnsureAlphaMovieTablesInitialized()
     InitializeHuffmanTable(kJpegLumaAcSpec, HuffmanTable[3], HuffmanTableEx[3]);
     initialized = true;
 }
-const int jpeg_natural_order[DCTSIZE2 + 16] = {
-    0,  1,  8,  16, 9,  2,  3,  10, 17, 24, 32, 25, 18, 11, 4,  5,  12, 19, 26, 33,
-    40, 48, 41, 34, 27, 20, 13, 6,  7,  14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36,
-    29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54,
-    47, 55, 62, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63};
-uint8_t decode_extended_huffman(_HuffmanTable* tbl, BufferManager* stream)
+static uint8_t decode_extended_huffman(_HuffmanTable* tbl, BufferManager* stream)
 {
     uint32_t code = 0;                           // uVar7
     int bits_to_read = 9;                        // iVar8
@@ -443,7 +443,7 @@ uint8_t decode_extended_huffman(_HuffmanTable* tbl, BufferManager* stream)
                                        code                                      // uVar7
     ];
 }
-void decode_dc_run_length(_HuffmanTable* tbl,
+static void decode_dc_run_length(_HuffmanTable* tbl,
                           BufferManager* stream,
                           int16_t* block,
                           int32_t& lastStatus)
@@ -631,7 +631,7 @@ void decode_dc_run_length(_HuffmanTable* tbl,
     lastStatus += value;
     block[0] = lastStatus;
 }
-int decode_ac_run_length(_HuffmanTable* tbl, BufferManager* stream, int16_t* block)
+static int decode_ac_run_length(_HuffmanTable* tbl, BufferManager* stream, int16_t* block)
 {
     int coeff_index = 1; // iVar16 - 当前系数索引
 
@@ -862,7 +862,6 @@ int decode_ac_run_length(_HuffmanTable* tbl, BufferManager* stream, int16_t* blo
         }
     } while (true);
 }
-typedef long JLONG;
 #define LEFT_SHIFT(a, b) ((JLONG)((unsigned long)(a) << (b)))
 #define RIGHT_SHIFT(x, shft) ((x) >> (shft))
 #define DEQUANTIZE(coef, quantval) (((int)(coef)) * (quantval))
@@ -887,7 +886,6 @@ typedef long JLONG;
 #define CENTERJSAMPLE 128
 #define RANGE_MASK (MAXJSAMPLE * 4 + 3)
 static JSAMPLE* sample_range_limit = nullptr;
-static struct SwsContext* img_convert_ctx = nullptr;
 void jpeg_idct_data(int16_t* block, uint8_t* qtbl, uint8_t* retBlock, uint32_t retBlockPitch)
 {
     JLONG tmp0, tmp1, tmp2, tmp3;
@@ -1137,6 +1135,272 @@ void jpeg_idct_data(int16_t* block, uint8_t* qtbl, uint8_t* retBlock, uint32_t r
     }
 }
 
+//---------------------------------------------------------------------------
+// 16x16块 YUV420/YUVA420 转 RGBA (直接转换，减少中间数据)
+//---------------------------------------------------------------------------
+static inline uint8_t clamp_val(int val)
+{
+    if (val < 0)
+        return 0;
+    if (val > 255)
+        return 255;
+    return (uint8_t)val;
+}
+static inline void fill_8x8_block(uint8_t* dst, int row, int col, int row_stride, int value)
+{
+    uint64_t pattern = (uint64_t)(uint8_t)value * 0x0101010101010101;
+    uint8_t* start = dst + row * row_stride + col;
+    for (int i = 0; i < 8; i++)
+    {
+        *((uint64_t*)(start + i * row_stride)) = pattern;
+    }
+}
+static inline void fill_8x8_block(uint8_t* block, int row, int col, int value)
+{
+    // 用于8x8块（stride=8）
+    uint64_t pattern = (uint64_t)(uint8_t)value * 0x0101010101010101ULL;
+    uint8_t* start = block + row * 8 + col;
+    for (int i = 0; i < 8; i++)
+    {
+        *((uint64_t*)(start + i * 8)) = pattern;
+    }
+}
+static void Convert16x16BlockToRGBA(const uint8_t* y_block,
+                                    const uint8_t* u_block,
+                                    const uint8_t* v_block,
+                                    const uint8_t* alpha_block,
+                                    int alpha_stride,
+                                    uint8_t* rgb_output,
+                                    int output_stride,
+                                    int block_x,
+                                    int block_y)
+{
+    for (int y = 0; y < 16; y++)
+    {
+        for (int x = 0; x < 16; x++)
+        {
+            int uv_x = x >> 1;
+            int uv_y = y >> 1;
+
+            int Y = y_block[y * 16 + x];
+            int U = u_block[uv_y * 8 + uv_x];
+            int V = v_block[uv_y * 8 + uv_x];
+
+            int R = clamp_val(Y + ((359 * (V - 128)) >> 8));
+            int G = clamp_val(Y - ((88 * (U - 128) + 183 * (V - 128)) >> 8));
+            int B = clamp_val(Y + ((454 * (U - 128)) >> 8));
+
+            int out_x = block_x + x;
+            int out_y = block_y + y;
+            uint8_t* pixel = rgb_output + (out_y * output_stride + out_x * 4);
+
+            pixel[0] = R;
+            pixel[1] = G;
+            pixel[2] = B;
+            pixel[3] = alpha_block ? alpha_block[y * alpha_stride + x] : 255;
+        }
+    }
+}
+//---------------------------------------------------------------------------
+// 解码并直接转换为RGBA
+//---------------------------------------------------------------------------
+static void DecodeAndConvertToRGBA(struct BufferManager* stream,
+                                   uint8_t qtbl[3][64],
+                                   uint8_t* rgb_output,
+                                   int width,
+                                   int height,
+                                   const uint8_t* alpha_data,
+                                   bool has_alpha)
+{
+    int16_t idcBuff[64] = {0};
+    int decoded;
+
+    // 8*8分块处理, U/V单独算一个小块，2*2Y算一个小块
+    for (size_t i = 0; i < height / 16; i++)
+    {
+        for (size_t j = 0; j < width / 16; j++)
+        {
+            // 临时存储当前16x16块的YUV数据
+            uint8_t y_block[256]; // 16x16 Y
+            uint8_t u_block[64];  // 8x8 U
+            uint8_t v_block[64];  // 8x8 V
+            uint8_t a_block[256]; // 16x16 A
+
+            // --- 1. 解码U块 (1个8x8) ---
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[1][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(u_block, 0, 0, 8, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[1], u_block, 8);
+            }
+
+            // --- 2. 解码V块 (1个8x8) ---
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[1][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(v_block, 0, 0, 8, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[1], v_block, 8);
+            }
+
+            // --- 3. 解码4个Y块 (每个8x8) ---
+            // Y块1 (左上)
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[0][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(y_block, 0, 0, 16, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[0], y_block, 16);
+            }
+
+            // Y块2 (右上)
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[0][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(y_block, 0, 8, 16, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[0], y_block + 8, 16);
+            }
+
+            // Y块3 (左下)
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[0][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(y_block, 8, 0, 16, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[0], y_block + 8 * 16, 16);
+            }
+
+            // Y块4 (右下)
+            memset(idcBuff, 0, 128);
+            decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+            decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+            if (decoded == 1)
+            {
+                int dequantized = idcBuff[0] * qtbl[0][0];
+                int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                int pixel = clamp_val((rounded >> 3) + 128);
+                fill_8x8_block(y_block, 8, 8, 16, pixel);
+            }
+            else
+            {
+                jpeg_idct_data(idcBuff, qtbl[0], y_block + 8 * 16 + 8, 16);
+            }
+
+            // yuva420p时增加alpha解码
+            if (has_alpha)
+            {
+                memset(idcBuff, 0, 128);
+                decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+                decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+                if (decoded == 1)
+                {
+                    int dequantized = idcBuff[0] * qtbl[0][0];
+                    int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                    int pixel = clamp_val((rounded >> 3) + 128);
+                    fill_8x8_block(a_block, 0, 0, 16, pixel);
+                }
+                else
+                {
+                    jpeg_idct_data(idcBuff, qtbl[0], a_block, 16);
+                }
+
+                memset(idcBuff, 0, 128);
+                decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+                decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+                if (decoded == 1)
+                {
+                    int dequantized = idcBuff[0] * qtbl[0][0];
+                    int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                    int pixel = clamp_val((rounded >> 3) + 128);
+                    fill_8x8_block(a_block, 0, 8, 16, pixel);
+                }
+                else
+                {
+                    jpeg_idct_data(idcBuff, qtbl[0], a_block + 8, 16);
+                }
+
+                memset(idcBuff, 0, 128);
+                decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+                decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+                if (decoded == 1)
+                {
+                    int dequantized = idcBuff[0] * qtbl[0][0];
+                    int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                    int pixel = clamp_val((rounded >> 3) + 128);
+                    fill_8x8_block(a_block, 8, 0, 16, pixel);
+                }
+                else
+                {
+                    jpeg_idct_data(idcBuff, qtbl[0], a_block + 8 * 16, 16);
+                }
+
+                memset(idcBuff, 0, 128);
+                decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
+                decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
+                if (decoded == 1)
+                {
+                    int dequantized = idcBuff[0] * qtbl[0][0];
+                    int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
+                    int pixel = clamp_val((rounded >> 3) + 128);
+                    fill_8x8_block(a_block, 8, 8, 16, pixel);
+                }
+                else
+                {
+                    jpeg_idct_data(idcBuff, qtbl[0], a_block + 8 * 16 + 8, 16);
+                }
+            }
+
+            // --- 4. 直接转换为RGBA ---
+            //yuva420p/yuv420p通过has_alpha=true/false区分
+            int block_x = j * 16;
+            int block_y = i * 16;
+            const uint8_t* alpha_block =
+                has_alpha ? a_block
+                          : (alpha_data ? alpha_data + (block_y * width + block_x) : nullptr);
+
+            Convert16x16BlockToRGBA(y_block, u_block, v_block, alpha_block, has_alpha ? 16 : width,
+                                    rgb_output, width * 4, block_x, block_y);
+        }
+    }
+}
+
 #define NCB_MODULE_NAME TJS_N("AlphaMovie.dll")
 
 struct AlphaMovieHeader
@@ -1350,219 +1614,15 @@ void tTJSNI_AlphaMovie::open(tTJSString fileName)
             cacheLen = _a.size_of_frame - _a.zlib_buffer_size;
             cache = new tjs_uint8[cacheLen];
             filePtr->ReadBuffer(cache, cacheLen);
-            uLongf yuvSize = _a.frame_width * _a.frame_height * 3 / 2;
-            tjs_uint8* yuv_buffer = new tjs_uint8[yuvSize];
-            tjs_uint8* uStart = yuv_buffer + _a.frame_width * _a.frame_height;
-            tjs_uint8* vStart = uStart + _a.frame_width * _a.frame_height / 4;
 
-            // jpeg decode
-            struct BufferManager* stream = new BufferManager(cache, cacheLen);
-            int16_t* idcBuff = new int16_t[64];
-            int decoded = 0;
-            // 8*8分块处理, U/V单独算一个小块，2*2Y算一个小块
-            for (size_t i = 0; i < _a.frame_height / 16; i++)
-            {
-                for (size_t j = 0; j < _a.frame_width / 16; j++)
-                {
-                    // Pose
-                    tjs_uint8* currentY = yuv_buffer + _a.frame_width * 16 * i + 16 * j;
-                    tjs_uint8* currentU = uStart + _a.frame_width * 4 * i + 8 * j;
-                    tjs_uint8* currentV = vStart + _a.frame_width * 4 * i + 8 * j;
-
-                    // U
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[1][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentU) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 2)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 3)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 4)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 5)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 6)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[1], currentU, _a.frame_width / 2);
-                    }
-
-                    // V
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[1][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentV) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 2)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 3)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 4)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 5)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 6)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[1], currentV, _a.frame_width / 2);
-                    }
-
-                    // 4*Y
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentY) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + 8)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + 8, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + 8 + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-                }
-            }
-            // clean
-            delete stream;
-            delete[] idcBuff, delete[] cache;
-
-            // yuv420p to rgba
-            uLongf rgbaSize = _a.frame_width * _a.frame_height * 4;
+            // decode
+            tjs_uint64 rgbaSize = _a.frame_width * _a.frame_height * 4;
             tjs_uint8* rgba_buffer = new tjs_uint8[rgbaSize];
-            img_convert_ctx =
-                sws_getCachedContext(img_convert_ctx, _a.frame_width, _a.frame_height,
-                                     AV_PIX_FMT_YUV420P, _a.frame_width, _a.frame_height,
-                                     AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-            const uint8_t* src_slice[4] = {
-                yuv_buffer, yuv_buffer + _a.frame_width * _a.frame_height,
-                yuv_buffer + _a.frame_width * _a.frame_height * 5 / 4, NULL};
-            int src_stride[4] = {_a.frame_width,     // Y分量步长
-                                 _a.frame_width / 2, // U分量步长（宽度减半）
-                                 _a.frame_width / 2, // V分量步长（宽度减半）
-                                 0};
-            uint8_t* dst[4] = {rgba_buffer, // RGBA数据
-                               NULL, NULL, NULL};
-            int dst_stride[4] = {_a.frame_width * 4, // RGBA步长
-                                 0, 0, 0};
-            sws_scale(img_convert_ctx, src_slice, src_stride, 0, _a.frame_height, dst, dst_stride);
-            // clean
-            delete[] yuv_buffer;
-
-            // blend alpha to rgba
-            TVPBindMaskToMain((tjs_uint32*)rgba_buffer, alpha_buffer, alphaSize);
-            // clean
+            struct BufferManager* stream = new BufferManager(cache, cacheLen);
+            DecodeAndConvertToRGBA(stream, qtbl, rgba_buffer, _a.frame_width, _a.frame_height,
+                                   alpha_buffer, false);
+            delete stream;
+            delete[] cache;
             delete[] alpha_buffer;
 
             // set value
@@ -1574,326 +1634,15 @@ void tTJSNI_AlphaMovie::open(tTJSString fileName)
             tjs_uint32 cacheLen = _a.size_of_frame;
             tjs_uint8* cache = new tjs_uint8[cacheLen];
             filePtr->ReadBuffer(cache, cacheLen);
-            tjs_uint32 yuvaSize = _a.frame_width * _a.frame_height * 5 / 2;
-            tjs_uint8* yuva_buffer = new tjs_uint8[yuvaSize];
-            tjs_uint8* uStart = yuva_buffer + _a.frame_width * _a.frame_height;
-            tjs_uint8* vStart = uStart + _a.frame_width * _a.frame_height / 4;
-            tjs_uint8* aStart = vStart + _a.frame_width * _a.frame_height / 4;
 
             // decode
-            struct BufferManager* stream = new BufferManager(cache, cacheLen);
-            int16_t* idcBuff = new int16_t[64];
-            int decoded = 0;
-            // 8*8分块处理, U/V单独算一个小块，2*2Y/A算一个小块
-            for (size_t i = 0; i < _a.frame_height / 16; i++)
-            {
-                for (size_t j = 0; j < _a.frame_width / 16; j++)
-                {
-                    // Pose
-                    tjs_uint8* currentY = yuva_buffer + _a.frame_width * 16 * i + 16 * j;
-                    tjs_uint8* currentU = uStart + _a.frame_width * 4 * i + 8 * j;
-                    tjs_uint8* currentV = vStart + _a.frame_width * 4 * i + 8 * j;
-                    tjs_uint8* currentA = aStart + _a.frame_width * 16 * i + 16 * j;
-
-                    // U
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[1][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentU) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 2)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 3)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 4)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 5)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 6)) = pattern;
-                        *((uint64_t*)(currentU + _a.frame_width / 2 * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[1], currentU, _a.frame_width / 2);
-                    }
-
-                    // V
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[0], stream, idcBuff, stream->decodeUVStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[1], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[1][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentV) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 2)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 3)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 4)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 5)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 6)) = pattern;
-                        *((uint64_t*)(currentV + _a.frame_width / 2 * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[1], currentV, _a.frame_width / 2);
-                    }
-
-                    // 4*Y
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentY) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + 8)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + 8, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentY + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentY + 8 + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentY + 8 + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-
-                    // 4*A
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)currentA) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentA, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentA + 8)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 2)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 3)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 4)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 5)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 6)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 7)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentA + 8, _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentA + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentA + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentA + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-                    memset(idcBuff, 0, 128);
-                    decode_dc_run_length(&HuffmanTable[2], stream, idcBuff, stream->decodeYStatus);
-                    decoded = decode_ac_run_length(&HuffmanTable[3], stream, idcBuff);
-                    if (decoded == 1)
-                    {
-                        int dequantized = idcBuff[0] * qtbl[0][0];
-                        int rounded = (dequantized < 0) ? dequantized + 7 : dequantized;
-                        int pixel = (rounded >> 3) + 128;
-                        pixel = (pixel < 0) ? 0 : (pixel > 255) ? 255 : pixel;
-
-                        uint64_t pattern = (uint64_t)(uint8_t)pixel * 0x0101010101010101;
-
-                        // 填充8x8块 - 7次内存写入覆盖整个块
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 8)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 9)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 10)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 11)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 12)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 13)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 14)) = pattern;
-                        *((uint64_t*)(currentA + 8 + _a.frame_width * 15)) = pattern;
-                    }
-                    else
-                    {
-                        jpeg_idct_data(idcBuff, qtbl[0], currentA + 8 + _a.frame_width * 8,
-                                       _a.frame_width);
-                    }
-                }
-            }
-            // clean
-            delete stream;
-            delete[] idcBuff, delete[] cache;
-
-            // yuva420p to rgba
-            uLongf rgbaSize = _a.frame_width * _a.frame_height * 4;
+            tjs_uint64 rgbaSize = _a.frame_width * _a.frame_height * 4;
             tjs_uint8* rgba_buffer = new tjs_uint8[rgbaSize];
-            img_convert_ctx =
-                sws_getCachedContext(img_convert_ctx, _a.frame_width, _a.frame_height,
-                                     AV_PIX_FMT_YUVA420P, _a.frame_width, _a.frame_height,
-                                     AV_PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-            const uint8_t* src_slice[5] = {
-                yuva_buffer, yuva_buffer + _a.frame_width * _a.frame_height,
-                yuva_buffer + _a.frame_width * _a.frame_height * 5 / 4,
-                yuva_buffer + _a.frame_width * _a.frame_height * 3 / 2, NULL};
-            int src_stride[5] = {_a.frame_width,     // Y分量步长
-                                 _a.frame_width / 2, // U分量步长（宽度减半）
-                                 _a.frame_width / 2, // V分量步长（宽度减半）
-                                 _a.frame_width, 0};
-            uint8_t* dst[4] = {rgba_buffer, // RGBA数据
-                               NULL, NULL, NULL};
-            int dst_stride[4] = {_a.frame_width * 4, // RGBA步长
-                                 0, 0, 0};
-            sws_scale(img_convert_ctx, src_slice, src_stride, 0, _a.frame_height, dst, dst_stride);
-            // clean
-            delete[] yuva_buffer;
+            struct BufferManager* stream = new BufferManager(cache, cacheLen);
+            DecodeAndConvertToRGBA(stream, qtbl, rgba_buffer, _a.frame_width, _a.frame_height,
+                                   nullptr, true);
+            delete stream;
+            delete[] cache;
 
             // set value
             _a.ptrData = rgba_buffer;

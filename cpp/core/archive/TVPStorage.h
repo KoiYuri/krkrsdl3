@@ -197,6 +197,12 @@ ttstr TVPStringFromBMPUnicode(const tjs_uint16* src, tjs_int maxlen = -1);
 //---------------------------------------------------------------------------
 tTVPArchive* TVPOpenArchive(const ttstr& name, bool normalizeFileName);
 // open archive and return tTVPArchive instance.
+typedef tTVPArchive* (*TVPArchiveCreatorFunc)(const ttstr& name, tTJSBinaryStream* st, bool normalizeFileName);
+// archive type creator
+void TVPRegisterArchiveFormat(TVPArchiveCreatorFunc creator);
+// register archive type
+void TVPUnregisterArchiveFormat(TVPArchiveCreatorFunc creator);
+// remove archive type
 
 int TVPCheckArchive(const ttstr& localname);
 

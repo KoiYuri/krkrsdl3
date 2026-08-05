@@ -11,6 +11,20 @@
 #include "tjsDictionary.h"
 #include "TVPScript.h"
 
+bool TVPQuickTestPNG(tTJSBinaryStream* src)
+{
+    uint8_t header[4];
+    tjs_uint64 origSrcPos = src->GetPosition();
+    if (src->Read(header, sizeof(header)) == sizeof(header))
+    {
+        src->SetPosition(origSrcPos);
+    }
+    if (!memcmp(header, "\x89PNG", 4))
+    {
+        return true;
+    }
+    return false;
+}
 bool TVPAcceptSaveAsPNG(void* formatdata, const ttstr& type, class iTJSDispatch2** dic)
 {
     bool result = false;
@@ -714,3 +728,12 @@ void TVPLoadHeaderPNG(void* formatdata, tTJSBinaryStream* src, iTJSDispatch2** d
     }
     png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 }
+
+// export
+tTVPRegisterGraphicInfo _pngGraphicInfo(TJS_N(".png"),
+                                        TVPQuickTestPNG,
+                                        TVPLoadPNG,
+                                        TVPLoadHeaderPNG,
+                                        TVPSaveAsPNG,
+                                        TVPAcceptSaveAsPNG,
+                                        NULL);

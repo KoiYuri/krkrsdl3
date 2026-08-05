@@ -171,7 +171,8 @@ BasePlayer::BasePlayer(CBaseRenderer* renderer)
   : m_CurrentAudio(AVMEDIA_TYPE_AUDIO, VideoPlayer_AUDIO),
     m_CurrentVideo(AVMEDIA_TYPE_VIDEO, VideoPlayer_VIDEO),
     m_messenger("player"),
-    m_pRenderer(renderer)
+    m_pRenderer(renderer),
+    tTVPThread("TVPVideoPlayer")
 {
     TVPInitDirectSound(); // to avoid initialize in other thread
     m_playSpeed = DVD_PLAYSPEED_NORMAL;

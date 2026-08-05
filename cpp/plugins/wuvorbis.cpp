@@ -1,12 +1,14 @@
-#include "tjsCommHead.h"
-#include "VorbisWaveDecoder.h"
-
-#include "WaveIntf.h"
+//---------------------------------------------------------------------------
+#include "ncbind/ncbind.hpp"
+#include <stdio.h>
+#include "TVPWaveManager.h"
 #include "TVPSystem.h"
 #include "TVPStorage.h"
 #include "TVPDebug.h"
 
 #include "vorbis/vorbisfile.h"
+
+#define NCB_MODULE_NAME TJS_N("wuvorbis.dll")
 
 static const bool FloatExtraction = false; // true if output format is IEEE 32-bit float
 
@@ -125,22 +127,6 @@ private:
         return decoder->InputStream->Seek(0, TJS_BS_SEEK_CUR);
     }
 };
-
-tTVPWaveDecoder* VorbisWaveDecoderCreator::Create(const ttstr& storagename, const ttstr& extension)
-{
-    static ttstr strext = TJS_N(".ogg");
-    VorbisWaveDecoder* decoder = nullptr;
-    if (extension == strext)
-    {
-        decoder = new VorbisWaveDecoder();
-        if (!decoder->SetStream(storagename))
-        {
-            delete decoder;
-            decoder = nullptr;
-        }
-    }
-    return decoder;
-}
 
 bool VorbisWaveDecoder::Render(void* buf, tjs_uint bufsamplelen, tjs_uint& rendered)
 {
@@ -291,3 +277,32 @@ bool VorbisWaveDecoder::SetStream(const ttstr& url)
 
     return true;
 }
+
+class VorbisWaveDecoderCreator : public tTVPWaveDecoderCreator
+{
+public:
+    tTVPWaveDecoder* Create(const ttstr& storagename, const ttstr& extension)
+    {
+        static ttstr strext = TJS_N(".ogg");
+        VorbisWaveDecoder* decoder = nullptr;
+        if (extension == strext)
+        {
+            decoder = new VorbisWaveDecoder();
+            if (!decoder->SetStream(storagename))
+            {
+                delete decoder;
+                decoder = nullptr;
+            }
+        }
+        return decoder;
+    }
+};
+//---------------------------------------------------------------------------
+
+static VorbisWaveDecoderCreator creator;
+static void _init()
+{
+    TVPRegisterWaveDecoderCreator(&creator);
+}
+
+NCB_PRE_REGIST_CALLBACK(_init);

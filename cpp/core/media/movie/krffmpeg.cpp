@@ -13,8 +13,6 @@ extern "C"
 #include "CodecVideo.h"
 #include "VideoPlayerAudio.h"
 
-#include "tjsNativeVideoOverlay.h"
-
 TVPMoviePlayer::TVPMoviePlayer()
 {
     m_pPlayer = new KRMovie::BasePlayer(this);

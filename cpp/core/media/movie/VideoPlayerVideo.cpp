@@ -30,7 +30,7 @@ public:
 CVideoPlayerVideo::CVideoPlayerVideo(CDVDClock* pClock,
                                      CDVDMessageQueue& parent,
                                      CBaseRenderer* renderer)
-  : tTVPThread(),
+  : tTVPThread("TVPVideoPlayerVideo"),
     IDVDStreamPlayerVideo(),
     m_messageQueue("video"),
     m_messageParent(parent),
@@ -933,72 +933,28 @@ void CVideoPlayerVideo::FrameMove()
     }
 }
 
-void CVideoPlayerVideo::PreInit()
-{
-    if (!TVPIsInMainThread())
-        return;
-
-    tTJSUniqueLock lock(m_statelock);
-
-    if (!m_pRenderer)
-    {
-        CreateRenderer();
-    }
-
-    UpdateDisplayLatency();
-
-    m_QueueSize = 2;
-    m_QueueSkip = 0;
-    m_presentstep = PRESENT_IDLE;
-}
-
-void CVideoPlayerVideo::UnInit()
-{
-    if (!TVPIsInMainThread())
-        return;
-
-    tTJSUniqueLock lock(m_statelock);
-
-    DeleteRenderer();
-
-    m_renderState = STATE_UNCONFIGURED;
-}
-
 bool CVideoPlayerVideo::Flush()
 {
     if (!m_pRenderer)
         return true;
 
-    if (TVPIsInMainThread())
+    tTJSUniqueLock lock(m_statelock);
+    tTJSUniqueLock lock2(m_presentlock);
+    tTJSUniqueLock lock3(m_datalock);
+
+    if (m_pRenderer)
     {
-        tTJSUniqueLock lock(m_statelock);
-        tTJSUniqueLock lock2(m_presentlock);
-        tTJSUniqueLock lock3(m_datalock);
+        m_pRenderer->Flush();
 
-        if (m_pRenderer)
-        {
-            m_pRenderer->Flush();
+        m_queued.clear();
+        m_discard.clear();
+        m_free.clear();
+        m_presentsource = 0;
+        m_presentstep = PRESENT_IDLE;
+        for (int i = 1; i < m_QueueSize; i++)
+            m_free.push_back(i);
 
-            m_queued.clear();
-            m_discard.clear();
-            m_free.clear();
-            m_presentsource = 0;
-            m_presentstep = PRESENT_IDLE;
-            for (int i = 1; i < m_QueueSize; i++)
-                m_free.push_back(i);
-
-            m_flushEvent.Set();
-        }
-    }
-    else
-    {
-        assert(false);
-        if (!m_flushEvent.WaitFor(1000))
-        {
-            return false;
-        }
-        else
-            return true;
+        m_flushEvent.Set();
     }
     return true;
 }

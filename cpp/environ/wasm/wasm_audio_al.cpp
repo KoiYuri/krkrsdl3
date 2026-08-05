@@ -10,7 +10,7 @@
 #include "PlatformThread.h"
 #include "TVPSystem.h"
 #include "TVPDebug.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 
 #include <emscripten/emscripten.h>
 

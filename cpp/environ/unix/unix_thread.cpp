@@ -64,7 +64,7 @@ struct TVPThreadImpl
 
 #define THR_IMPL ((TVPThreadImpl*)_impl)
 
-tTVPThread::tTVPThread()
+tTVPThread::tTVPThread(const char* name)
 {
     Terminated = false;
     Suspended = true;
@@ -82,6 +82,7 @@ tTVPThread::tTVPThread()
     else
     {
         THR_IMPL->thread_created = true;
+        pthread_setname_np(thread, name);
         _tvpThreadCount.fetch_add(1, std::memory_order_relaxed);
         _tvpThreadTotalCreated.fetch_add(1, std::memory_order_relaxed);
     }
@@ -263,16 +264,6 @@ void TVPOnThreadExited()
 void TVPAddOnThreadExitEvent(const std::function<void()>& ev)
 {
     _OnThreadExitedEvents.emplace_back(ev);
-}
-
-bool TVPIsInMainThread()
-{
-#if defined(_KRKRSDL3_EMSCRIPTEN)
-    return emscripten_is_main_browser_thread();
-#else
-    static pthread_t main_tid = pthread_self();
-    return pthread_equal(pthread_self(), main_tid);
-#endif
 }
 
 uint64_t TVPGetCurrentThreadID()

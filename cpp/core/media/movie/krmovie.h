@@ -12,7 +12,8 @@
 #ifndef __KRMOVIE_H__
 #define __KRMOVIE_H__
 
-#include "tjsNativeVideoOverlay.h"
+#include "ComplexRect.h"
+#include "NativeEventQueue.h"
 
 //---------------------------------------------------------------------------
 enum tTVPVideoStatus
@@ -23,6 +24,13 @@ enum tTVPVideoStatus
     vsProcessing,
     vsEnded,
     vsReady
+};
+//---------------------------------------------------------------------------
+class iTVPVideoCallback
+{
+public:
+    virtual void PostEvent(const NativeEvent& ev) = 0;
+    virtual void WndProc(NativeEvent& ev) = 0;
 };
 //---------------------------------------------------------------------------
 class tTVPBaseTexture;
@@ -133,28 +141,28 @@ public:
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-void GetVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetVideoOverlayObject(iTVPVideoCallback* callbackwin,
                                   tTJSBinaryStream* stream,
                                   const tjs_char* streamname,
                                   const tjs_char* type,
                                   uint64_t size,
                                   class iTVPVideoOverlay** out);
 
-void GetVideoLayerObject(tTJSNI_VideoOverlay* callbackwin,
+void GetVideoLayerObject(iTVPVideoCallback* callbackwin,
                                 tTJSBinaryStream* stream,
                                 const tjs_char* streamname,
                                 const tjs_char* type,
                                 uint64_t size,
                                 class iTVPVideoOverlay** out);
 
-void GetMixingVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetMixingVideoOverlayObject(iTVPVideoCallback* callbackwin,
                                         tTJSBinaryStream* stream,
                                         const tjs_char* streamname,
                                         const tjs_char* type,
                                         uint64_t size,
                                         class iTVPVideoOverlay** out);
 
-void GetMFVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetMFVideoOverlayObject(iTVPVideoCallback* callbackwin,
                                     tTJSBinaryStream* stream,
                                     const tjs_char* streamname,
                                     const tjs_char* type,

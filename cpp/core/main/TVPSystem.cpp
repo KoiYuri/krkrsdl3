@@ -1365,18 +1365,6 @@ void TVPAfterSystemInit()
             TVPDefaultHoldAlpha = false;
     }
 
-    // check TVPJPEGFastLoad option
-    if (TVPGetCommandLine(TJS_N("-jpegdec"), &opt)) // this specifies precision for JPEG decoding
-    {
-        ttstr str(opt);
-        if (str == TJS_N("normal"))
-            TVPJPEGLoadPrecision = jlpMedium;
-        else if (str == TJS_N("low"))
-            TVPJPEGLoadPrecision = jlpLow;
-        else if (str == TJS_N("high"))
-            TVPJPEGLoadPrecision = jlpHigh;
-    }
-
     // timer precision
     uint32_t prectick = 1;
     if (TVPGetCommandLine(TJS_N("-timerprec"), &opt))

@@ -8,8 +8,6 @@ extern "C"
 #include "libswscale/swscale.h"
 }
 
-#include "tjsNativeVideoOverlay.h"
-
 NS_KRMOVIE_BEGIN
 
 tTVPBaseTexture* VideoPresentLayer::GetFrontBuffer()
@@ -64,7 +62,7 @@ MoviePlayerLayer::~MoviePlayerLayer()
     TVPRemoveContinuousEventHook(this);
 }
 
-void MoviePlayerLayer::BuildGraph(tTJSNI_VideoOverlay* callbackwin,
+void MoviePlayerLayer::BuildGraph(iTVPVideoCallback* callbackwin,
                                   tTJSBinaryStream* stream,
                                   const tjs_char* streamname,
                                   const tjs_char* type,

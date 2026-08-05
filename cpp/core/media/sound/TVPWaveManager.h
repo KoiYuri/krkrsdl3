@@ -16,75 +16,7 @@
 #include "tjsCommHead.h"
 #include "tjsNative.h"
 #include "tjsUtils.h"
-typedef tTVReal D3DVALUE;
-
-/*[*/
-//---------------------------------------------------------------------------
-// Sound Global Focus Mode
-//---------------------------------------------------------------------------
-enum tTVPSoundGlobalFocusMode
-{
-    /*0*/ sgfmNeverMute,       // never mutes
-    /*1*/ sgfmMuteOnMinimize,  // will mute on the application minimize
-    /*2*/ sgfmMuteOnDeactivate // will mute on the application deactivation
-};
-//---------------------------------------------------------------------------
-
-/*]*/
-//---------------------------------------------------------------------------
-// GUID identifying WAVEFORMATEXTENSIBLE sub format
-//---------------------------------------------------------------------------
-extern tjs_uint8 TVP_GUID_KSDATAFORMAT_SUBTYPE_PCM[16];
-extern tjs_uint8 TVP_GUID_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT[16];
-//---------------------------------------------------------------------------
-
-/*[*/
-//---------------------------------------------------------------------------
-// PCM data format (internal use)
-//---------------------------------------------------------------------------
-struct tTVPWaveFormat
-{
-    tjs_uint SamplesPerSec; // sample granule per sec
-    tjs_uint Channels;
-    tjs_uint BitsPerSample;   // per one sample
-    tjs_uint BytesPerSample;  // per one sample
-    tjs_uint64 TotalSamples;  // in sample granule; unknown for zero
-    tjs_uint64 TotalTime;     // in ms; unknown for zero
-    tjs_uint32 SpeakerConfig; // bitwise OR of SPEAKER_* constants
-    bool IsFloat;             // true if the data is IEEE floating point
-    bool Seekable;
-};
-//---------------------------------------------------------------------------
-
-/*]*/
-//---------------------------------------------------------------------------
-// PCM bit depth converter
-//---------------------------------------------------------------------------
-extern void TVPConvertPCMTo16bits(tjs_int16* output,
-                                  const void* input,
-                                  const tTVPWaveFormat& format,
-                                  tjs_int count,
-                                  bool downmix);
-extern void TVPConvertPCMTo16bits(tjs_int16* output,
-                                  const void* input,
-                                  tjs_int channels,
-                                  tjs_int bytespersample,
-                                  tjs_int bitspersample,
-                                  bool isfloat,
-                                  tjs_int count,
-                                  bool downmix);
-extern void TVPConvertPCMToFloat(float* output,
-                                 const void* input,
-                                 tjs_int channels,
-                                 tjs_int bytespersample,
-                                 tjs_int bitspersample,
-                                 bool isfloat,
-                                 tjs_int count);
-extern void TVPConvertPCMToFloat(float* output,
-                                 const void* input,
-                                 const tTVPWaveFormat& format,
-                                 tjs_int count);
-//---------------------------------------------------------------------------
+#include "WaveFormatConverter.h"
 
 //---------------------------------------------------------------------------
 // tTVPWaveDecoder interface
@@ -150,17 +82,6 @@ public:
 };
 //---------------------------------------------------------------------------
 
-/*[*/
-//---------------------------------------------------------------------------
-// IDirectSound former declaration
-//---------------------------------------------------------------------------
-#ifndef __DSOUND_INCLUDED__
-struct IDirectSound;
-#endif
-class iTVPSoundBuffer;
-
-/*]*/
-
 //---------------------------------------------------------------------------
 // Constants
 //---------------------------------------------------------------------------
@@ -173,9 +94,6 @@ class iTVPSoundBuffer;
 
 extern void TVPReleaseDirectSound();
 extern void TVPResetVolumeToAllSoundBuffer();
-extern void TVPSetWaveSoundBufferUse3DMode(bool b);
-extern bool TVPGetWaveSoundBufferUse3DMode();
-extern void TVPWaveSoundBufferCommitSettings();
 //---------------------------------------------------------------------------
 
 #endif

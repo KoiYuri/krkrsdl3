@@ -1,5 +1,5 @@
 #pragma once
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 
 class FFWaveDecoderCreator : public tTVPWaveDecoderCreator
 {

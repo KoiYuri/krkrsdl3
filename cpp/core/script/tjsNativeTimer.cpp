@@ -184,7 +184,7 @@ public:
 
 } static* TVPTimerThread = NULL;
 //---------------------------------------------------------------------------
-tTVPTimerThread::tTVPTimerThread() : tTVPThread(), EventQueue(this, &tTVPTimerThread::Proc)
+tTVPTimerThread::tTVPTimerThread() : tTVPThread("TVPTimerThread"), EventQueue(this, &tTVPTimerThread::Proc)
 {
     PendingEventsAvailable = false;
     SetPriority(TVPLimitTimerCapacity ? ttpNormal : ttpHighest);

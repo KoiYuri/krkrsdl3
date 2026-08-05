@@ -8,6 +8,20 @@
 #include "tjsDictionary.h"
 #include "TVPScript.h"
 
+bool TVPQuickTestJPEG(tTJSBinaryStream* src)
+{
+    uint8_t header[4];
+    tjs_uint64 origSrcPos = src->GetPosition();
+    if (src->Read(header, sizeof(header)) == sizeof(header))
+    {
+        src->SetPosition(origSrcPos);
+    }
+    if (!memcmp(header, "\xFF\xD8\xFF", 3) && header[3] >= 0xE0 && header[3] <= 0xEF)
+    {
+        return true;
+    }
+    return false;
+}
 bool TVPAcceptSaveAsJPG(void* formatdata, const ttstr& type, class iTJSDispatch2** dic)
 {
     bool result = false;
@@ -57,7 +71,7 @@ extern "C"
 //---------------------------------------------------------------------------
 // JPEG loading handler
 //---------------------------------------------------------------------------
-tTVPJPEGLoadPrecision TVPJPEGLoadPrecision = jlpMedium;
+int TVPJPEGLoadPrecision = 1;
 //---------------------------------------------------------------------------
 struct my_error_mgr
 {
@@ -219,13 +233,13 @@ void TVPLoadJPEG(void* formatdata,
     int flags = TJFLAG_FASTDCT;
     switch (TVPJPEGLoadPrecision)
     {
-        case jlpLow:
+        case 0:
             flags = TJFLAG_FASTDCT | TJFLAG_FASTUPSAMPLE;
             break;
-        case jlpMedium:
+        case 1:
             flags = TJFLAG_FASTDCT;
             break;
-        case jlpHigh:
+        case 2:
             flags = TJFLAG_ACCURATEDCT;
             break;
     }
@@ -726,3 +740,12 @@ void TVPLoadHeaderJPG(void* formatdata, tTJSBinaryStream* src, iTJSDispatch2** d
     jpeg_destroy_decompress(&cinfo);
 }
 //---------------------------------------------------------------------------
+
+// export
+tTVPRegisterGraphicInfo _jpegGraphicInfo(TJS_N(".jpeg"),
+                                         TVPQuickTestJPEG,
+                                         TVPLoadJPEG,
+                                         TVPLoadHeaderJPG,
+                                         TVPSaveAsJPG,
+                                         TVPAcceptSaveAsJPG,
+                                         NULL);

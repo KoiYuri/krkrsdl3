@@ -1,9 +1,13 @@
-#include "tjsCommHead.h"
-#include "OpusWaveDecoder.h"
-
+//---------------------------------------------------------------------------
+#include "ncbind/ncbind.hpp"
+#include <stdio.h>
+#include "TVPWaveManager.h"
 #include "TVPStorage.h"
 
 #include "opus/opusfile.h"
+
+
+#define NCB_MODULE_NAME TJS_N("wuopus.dll")
 
 class OpusWaveDecoder : public tTVPWaveDecoder // decoder interface
 {
@@ -205,14 +209,27 @@ public:
     }
 };
 
-tTVPWaveDecoder* OpusWaveDecoderCreator::Create(const ttstr& storagename, const ttstr& extension)
+class OpusWaveDecoderCreator : public tTVPWaveDecoderCreator
 {
-    OpusWaveDecoder* decoder = nullptr;
-    decoder = new OpusWaveDecoder();
-    if (!decoder->SetStream(storagename))
+public:
+    tTVPWaveDecoder* Create(const ttstr& storagename, const ttstr& extension)
     {
-        delete decoder;
-        decoder = nullptr;
+        OpusWaveDecoder* decoder = nullptr;
+        decoder = new OpusWaveDecoder();
+        if (!decoder->SetStream(storagename))
+        {
+            delete decoder;
+            decoder = nullptr;
+        }
+        return decoder;
     }
-    return decoder;
+};
+//---------------------------------------------------------------------------
+
+static OpusWaveDecoderCreator creator;
+static void _init()
+{
+    TVPRegisterWaveDecoderCreator(&creator);
 }
+
+NCB_PRE_REGIST_CALLBACK(_init);

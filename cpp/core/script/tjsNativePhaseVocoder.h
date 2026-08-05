@@ -13,7 +13,7 @@
 #define PhaseVocoderFilterH
 
 #include "WaveLoopManager.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 
 class tRisaPhaseVocoderDSP;
 

@@ -18,7 +18,7 @@
 #include "tjsTypes.h"
 #include "WaveLoopManager.h"
 
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "PlatformMutex.h"
 
 //---------------------------------------------------------------------------

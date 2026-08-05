@@ -8,7 +8,6 @@
 #include "LayerBitmap.h"
 #include <algorithm>
 #include "krmovie.h"
-#include "KRMovieLayer.h"
 #include "TVPStorage.h"
 #include "PlatformThread.h"
 
@@ -17,26 +16,10 @@
 /*
  * Movie 描画用レイヤ
  */
-struct layerExMovie : public layerExBase_GL, tTVPContinuousEventCallbackIntf
+struct layerExMovie : public layerExBase_GL, tTVPContinuousEventCallbackIntf, iTVPVideoCallback
 {
 protected:
-    class VideoLayer : public KRMovie::VideoPresentLayer
-    {
-        std::function<void(KRMovieEvent, void*)> m_funcCallback;
-
-    public:
-        VideoLayer(const std::function<void(KRMovieEvent, void*)>& func) : m_funcCallback(func) {}
-        void BuildGraph(tTJSBinaryStream* stream,
-                        const tjs_char* streamname,
-                        const tjs_char* type,
-                        uint64_t size)
-        {
-            m_pPlayer->SetCallback(m_funcCallback);
-            m_pPlayer->OpenFromStream(stream, streamname, type, size);
-        }
-        virtual void OnPlayEvent(KRMovieEvent msg, void* p) override { m_funcCallback(msg, p); }
-    };
-    VideoLayer* VideoOverlay;
+    iTVPVideoOverlay* VideoOverlay;
 
     long movieWidth;
     long movieHeight;
@@ -55,7 +38,7 @@ protected:
 
     bool playing;
     tTJSCriticalSection mtxEvent;
-    std::vector<KRMovieEvent> PostEvents;
+    std::vector<NativeEvent> PostEvents;
 
 public:
     layerExMovie(DispatchT obj);
@@ -81,7 +64,10 @@ public:
      * 吉里吉里が暇なときに常に呼ばれる
      * 塗り直し処理
      */
-    virtual void OnContinuousCallback(tjs_uint64 tick);
+    virtual void OnContinuousCallback(tjs_uint64 tick) override;
+
+    virtual void PostEvent(const NativeEvent& ev) override;
+    virtual void WndProc(NativeEvent& ev) override;
 };
 
 /**
@@ -158,14 +144,7 @@ void layerExMovie::openMovie(const tjs_char* filename, bool alpha)
     }
     ttstr ext = TVPExtractStorageExt(filename);
     ext.ToLowerCase();
-    VideoLayer* pOverlay = new VideoLayer(
-        [this](KRMovieEvent msg, void* p)
-        {
-            tTJSCriticalSectionHolder lk(mtxEvent);
-            PostEvents.push_back(msg);
-        });
-    pOverlay->BuildGraph(in, filename, ext.c_str(), in->GetSize());
-    VideoOverlay = pOverlay;
+    GetVideoLayerObject(this, in, filename, ext.c_str(), in->GetSize(), &VideoOverlay);
     VideoOverlay->GetVideoSize(&movieWidth, &movieHeight);
     if (Bitmap[0])
         delete Bitmap[0];
@@ -289,27 +268,48 @@ void layerExMovie::onEnded()
     }
 }
 
+void layerExMovie::PostEvent(const NativeEvent& ev)
+{
+    tTJSCriticalSectionHolder lk(mtxEvent);
+    PostEvents.push_back(ev);
+}
+
+void layerExMovie::WndProc(NativeEvent& ev)
+{
+    tTJSCriticalSectionHolder lk(mtxEvent);
+    PostEvents.push_back(ev);
+}
+
 void layerExMovie::OnContinuousCallback(tjs_uint64 tick)
 {
     if (VideoOverlay)
     {
         // 更新
-        VideoOverlay->OnContinuousCallback(tick);
-        std::vector<KRMovieEvent> vecEvent;
+        std::vector<NativeEvent> vecEvent;
         {
             tTJSCriticalSectionHolder lk(mtxEvent);
             vecEvent.swap(PostEvents);
         }
-        for (KRMovieEvent msg : vecEvent)
+
+        for (NativeEvent msg : vecEvent)
         {
-            switch (msg)
+            switch (msg.Message)
             {
-                case KRMovieEvent::Update:
-                    onUpdate();
+                case WM_GRAPHNOTIFY:
+                {
+                    switch (msg.WParam)
+                    {
+                        case EC_UPDATE:
+                            onUpdate();
+                            break;
+                        case EC_COMPLETE:
+                            onEnded();
+                            break;
+                        default:
+                            break;
+                    }
                     break;
-                case KRMovieEvent::Ended:
-                    onEnded();
-                    break;
+                }
                 default:
                     break;
             }

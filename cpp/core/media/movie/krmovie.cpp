@@ -19,7 +19,7 @@
 
 static void VideoPostEvent(void* ctx, unsigned msg, uintptr_t wparam, uintptr_t lparam)
 {
-    auto* cb = static_cast<tTJSNI_VideoOverlay*>(ctx);
+    auto* cb = static_cast<iTVPVideoCallback*>(ctx);
     NativeEvent ev(msg);
     ev.WParam = wparam;
     ev.LParam = lparam;
@@ -29,7 +29,7 @@ static void VideoPostEvent(void* ctx, unsigned msg, uintptr_t wparam, uintptr_t 
         cb->WndProc(ev);
 }
 
-static void TryCreateOverlay(tTJSNI_VideoOverlay* callbackwin,
+static void TryCreateOverlay(iTVPVideoCallback* callbackwin,
                               tTJSBinaryStream* stream,
                               const tjs_char* streamname,
                               const tjs_char* /*type*/,
@@ -46,7 +46,7 @@ static void TryCreateOverlay(tTJSNI_VideoOverlay* callbackwin,
     *out = new NullOverlayPlayer(callbackwin);
 }
 
-static void TryCreateLayer(tTJSNI_VideoOverlay* callbackwin,
+static void TryCreateLayer(iTVPVideoCallback* callbackwin,
                             tTJSBinaryStream* stream,
                             const tjs_char* streamname,
                             const tjs_char* /*type*/,
@@ -63,7 +63,7 @@ static void TryCreateLayer(tTJSNI_VideoOverlay* callbackwin,
     *out = new NullLayerPlayer(callbackwin);
 }
 
-void GetVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetVideoOverlayObject(iTVPVideoCallback* callbackwin,
                            tTJSBinaryStream* stream,
                            const tjs_char* streamname,
                            const tjs_char* type,
@@ -80,7 +80,7 @@ void GetVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
 #endif
 }
 
-void GetVideoLayerObject(tTJSNI_VideoOverlay* callbackwin,
+void GetVideoLayerObject(iTVPVideoCallback* callbackwin,
                          tTJSBinaryStream* stream,
                          const tjs_char* streamname,
                          const tjs_char* type,
@@ -97,7 +97,7 @@ void GetVideoLayerObject(tTJSNI_VideoOverlay* callbackwin,
 #endif
 }
 
-void GetMixingVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetMixingVideoOverlayObject(iTVPVideoCallback* callbackwin,
                                  tTJSBinaryStream* stream,
                                  const tjs_char* streamname,
                                  const tjs_char* type,
@@ -114,7 +114,7 @@ void GetMixingVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
 #endif
 }
 
-void GetMFVideoOverlayObject(tTJSNI_VideoOverlay* callbackwin,
+void GetMFVideoOverlayObject(iTVPVideoCallback* callbackwin,
                              tTJSBinaryStream* stream,
                              const tjs_char* streamname,
                              const tjs_char* type,

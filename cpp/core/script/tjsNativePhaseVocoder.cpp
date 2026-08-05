@@ -12,7 +12,7 @@
 #include "tjsCommHead.h"
 #include "tjsNativePhaseVocoder.h"
 #include "PhaseVocoderDSP.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "TVPMsg.h"
 
 //---------------------------------------------------------------------------

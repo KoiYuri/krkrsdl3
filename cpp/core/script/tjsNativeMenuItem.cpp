@@ -319,7 +319,7 @@ void tTJSNI_BaseMenuItem::Invalidate()
     TVPCancelInputEvents(this);
 
     { // locked
-        tTJSSpinLockHolder holder(Children.Lock);
+        tTJSCriticalSectionHolder holder(Children.Lock);
         tjs_int count = Children.size();
         for (tjs_int i = 0; i < count; i++)
         {
@@ -425,7 +425,7 @@ iTJSDispatch2* tTJSNI_BaseMenuItem::GetChildrenArrayNoAddRef()
         // clear array
 
         { // locked
-            tTJSSpinLockHolder holder(Children.Lock);
+            tTJSCriticalSectionHolder holder(Children.Lock);
             tjs_int count = Children.size();
             tjs_int itemcount = 0;
             for (tjs_int i = 0; i < count; i++)

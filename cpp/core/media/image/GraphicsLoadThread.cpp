@@ -107,7 +107,7 @@ static void TVPLoadGraphicAsync_MetaInfoPushCallback(void* callbackdata,
 
 tTVPAsyncImageLoader::tTVPAsyncImageLoader()
   : EventQueue(this, &tTVPAsyncImageLoader::Proc),
-    tTVPThread()
+    tTVPThread("TVPAsyncImageLoader")
 {
     EventQueue.Allocate();
 }
@@ -335,27 +335,14 @@ void tTVPAsyncImageLoader::LoadingThread()
         } while (loading && !GetTerminated());
     }
 }
-tTVPGraphicHandlerType* TVPGuessGraphicLoadHandler(ttstr& name);
 void tTVPAsyncImageLoader::LoadImageFromCommand(tTVPImageLoadCommand* cmd)
 {
-    ttstr ext = TVPExtractStorageExt(cmd->path_);
-    tTVPGraphicHandlerType* handler = NULL;
-    ttstr name(cmd->path_);
-    if (ext.IsEmpty())
-    {
-        // missing extension
-        handler = TVPGuessGraphicLoadHandler(name);
-        //		cmd->result_ = TJS_N("Filename extension not found");
-    }
-    else
-    {
-        handler = TVPGetGraphicLoadHandler(ext);
-    }
+    tTVPRegisterGraphicInfo* handler = TVPGetGraphicLoadHandler(cmd->path_);
     if (handler)
     {
         try
         {
-            tTVPStreamHolder holder(name);
+            tTVPStreamHolder holder(cmd->path_);
             handler->Load(handler->FormatData, (void*)cmd->dest_, TVPLoadGraphicAsync_SizeCallback,
                           TVPLoadGraphicAsync_ScanLineCallback,
                           TVPLoadGraphicAsync_MetaInfoPushCallback, holder.Get(), -1, glmNormal);

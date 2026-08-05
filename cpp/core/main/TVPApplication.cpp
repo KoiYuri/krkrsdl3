@@ -16,7 +16,7 @@
 
 #include "Exception.h"
 #include "SystemControl.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "GraphicsLoadThread.h"
 #include "Platform.h"
 #include "PlatformView.h"

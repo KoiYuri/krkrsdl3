@@ -125,8 +125,10 @@ void TJSReleaseGlobalStringMap()
 //---------------------------------------------------------------------------
 ttstr TJSMapGlobalStringMap(const ttstr& string)
 {
+#ifndef _ONLYCONSOLE
     static tTJSCriticalSection _mutex;
     tTJSCriticalSectionHolder lk(_mutex);
+#endif
     return tTJSGlobalStringMap::Map(string);
 }
 //---------------------------------------------------------------------------

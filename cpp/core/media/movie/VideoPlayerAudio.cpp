@@ -24,7 +24,7 @@ public:
 };
 
 CVideoPlayerAudio::CVideoPlayerAudio(CDVDClock* pClock, CDVDMessageQueue& parent)
-  : tTVPThread(),
+  : tTVPThread("TVPVideoPlayerAudio"),
     IDVDStreamPlayerAudio(),
     m_messageQueue("audio"),
     m_messageParent(parent)

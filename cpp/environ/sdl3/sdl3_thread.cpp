@@ -30,13 +30,13 @@ struct TVPThreadImpl
     SDL_Mutex* mutex;
     SDL_Condition* cond;
 };
-tTVPThread::tTVPThread()
+tTVPThread::tTVPThread(const char* name)
 {
     Terminated = false;
     Suspended = true;
 
     _impl = new TVPThreadImpl;
-    THR_IMPL->thread = SDL_CreateThread(StartProc, "TVPThread", this);
+    THR_IMPL->thread = SDL_CreateThread(StartProc, name, this);
     if (!THR_IMPL->thread)
     {
         TVPThrowInternalError;
@@ -223,11 +223,6 @@ void TVPOnThreadExited()
 void TVPAddOnThreadExitEvent(const std::function<void()>& ev)
 {
     _OnThreadExitedEvents.emplace_back(ev);
-}
-
-bool TVPIsInMainThread()
-{
-    return SDL_IsMainThread();
 }
 
 uint64_t TVPGetCurrentThreadID()

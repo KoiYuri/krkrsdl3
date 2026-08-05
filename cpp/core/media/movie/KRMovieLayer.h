@@ -22,12 +22,12 @@ public:
 class MoviePlayerLayer : public VideoPresentLayer
 {
     typedef VideoPresentLayer inherit;
-    tTJSNI_VideoOverlay* m_pCallbackWin = nullptr;
+    iTVPVideoCallback* m_pCallbackWin = nullptr;
 
     ~MoviePlayerLayer();
 
 public:
-    void BuildGraph(tTJSNI_VideoOverlay* callbackwin,
+    void BuildGraph(iTVPVideoCallback* callbackwin,
                     tTJSBinaryStream* stream,
                     const tjs_char* streamname,
                     const tjs_char* type,

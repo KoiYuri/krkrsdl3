@@ -2,7 +2,7 @@
 
 #include "tjsCommHead.h"
 #include "FFWaveDecoder.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "TVPStorage.h"
 #include "TVPDebug.h"
 #include "TVPSystem.h"

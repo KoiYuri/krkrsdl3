@@ -19,7 +19,7 @@
 #define THR_IMPL ((TVPThreadImpl*)_impl)
 struct TVPThreadImpl { pthread_t thread; pthread_mutex_t mutex; pthread_cond_t cond; bool joined; };
 
-tTVPThread::tTVPThread()
+tTVPThread::tTVPThread(const char* name)
 {
     Terminated = false;
     Suspended = true;
@@ -28,6 +28,7 @@ tTVPThread::tTVPThread()
     pthread_mutex_init(&THR_IMPL->mutex, nullptr);
     pthread_cond_init(&THR_IMPL->cond, nullptr);
     pthread_create(&THR_IMPL->thread, nullptr, (void*(*)(void*))StartProc, this);
+    pthread_setname_np(thread, name);
 }
 
 tTVPThread::~tTVPThread()
@@ -174,7 +175,6 @@ void TVPAddOnThreadExitEvent(const std::function<void()>& ev)
     _OnThreadExitedEvents.emplace_back(ev);
 }
 
-bool TVPIsInMainThread() { return true; }  // NAPI runs on main thread
 uint64_t TVPGetCurrentThreadID() { return (uint64_t)pthread_self(); }
 void TVPSleepFor(uint32_t ms) { usleep(ms * 1000); }
 

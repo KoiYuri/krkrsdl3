@@ -36,6 +36,21 @@
 //---------------------------------------------------------------------------
 // TLG5 loading handler
 //---------------------------------------------------------------------------
+bool TVPQuickTestTLG(tTJSBinaryStream* src)
+{
+    uint8_t header[3];
+    tjs_uint64 origSrcPos = src->GetPosition();
+    if (src->Read(header, sizeof(header)) == sizeof(header))
+    {
+        src->SetPosition(origSrcPos);
+    }
+    if (!memcmp(header, "TLG", 3))
+    {
+        return true;
+    }
+    return false;
+}
+//---------------------------------------------------------------------------
 void TVPLoadTLG5(void* formatdata,
                  void* callbackdata,
                  tTVPGraphicSizeCallback sizecallback,
@@ -659,3 +674,18 @@ void TVPLoadHeaderTLG(void* formatdata, tTJSBinaryStream* src, iTJSDispatch2** d
     (*dic)->PropSet(TJS_MEMBERENSURE, TJS_N("bpp"), 0, &val, (*dic));
 }
 //---------------------------------------------------------------------------
+
+// export
+extern void TVPSaveAsTLG(void* formatdata,
+                         tTJSBinaryStream* dst,
+                         const iTVPBaseBitmap* image,
+                         const ttstr& mode,
+                         iTJSDispatch2* meta);
+extern bool TVPAcceptSaveAsTLG(void* formatdata, const ttstr& type, class iTJSDispatch2** dic);
+tTVPRegisterGraphicInfo _tlgGraphicInfo(TJS_N(".TLG"),
+                                        TVPQuickTestTLG,
+                                        TVPLoadTLG,
+                                        TVPLoadHeaderTLG,
+                                        TVPSaveAsTLG,
+                                        TVPAcceptSaveAsTLG,
+                                        NULL);

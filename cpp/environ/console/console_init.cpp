@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <time.h>
+#include <chrono>
 
 //---------------------------------------------------------------------------
 // Script system initialization script
@@ -682,4 +683,25 @@ TJS_END_NATIVE_MEMBERS
 
 // put version information to DMS
 } // end of tTJSNC_Debug::tTJSNC_Debug
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+
+void TVPConsoleLog(const tjs_char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printf(format, args);
+    printf("\n");
+    va_end(args);
+}
+
+tjs_uint32 TVPGetRoughTickCount32()
+{
+    return (tjs_uint32)time(NULL) * 1000;
+}
+
+uint64_t TVPGetRoughTickCount()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto duration = now.time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}

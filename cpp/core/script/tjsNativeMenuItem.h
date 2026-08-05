@@ -8,11 +8,11 @@
 template<typename T>
 struct ObjectVector : public std::vector<T*>
 { // thread safe vector
-    tTJSSpinLock Lock;
+    tTJSCriticalSection Lock;
 
     tjs_int Find(const T* object) const
     {
-        tTJSSpinLockHolder holder(((ObjectVector*)this)->Lock);
+        tTJSCriticalSectionHolder holder(((ObjectVector*)this)->Lock);
         auto it = std::find(this->begin(), this->end(), object);
         if (it == this->end())
             return -1;
@@ -21,7 +21,7 @@ struct ObjectVector : public std::vector<T*>
 
     bool Add(T* object, tjs_int idx = -1)
     {
-        tTJSSpinLockHolder holder(Lock);
+        tTJSCriticalSectionHolder holder(Lock);
         if (std::find(this->begin(), this->end(), object) != this->end())
             return false;
         if (idx == -1)
@@ -33,7 +33,7 @@ struct ObjectVector : public std::vector<T*>
 
     bool Remove(T* object)
     {
-        tTJSSpinLockHolder holder(Lock);
+        tTJSCriticalSectionHolder holder(Lock);
         auto it = std::find(this->begin(), this->end(), object);
         if (it == this->end())
             return false;

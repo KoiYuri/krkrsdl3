@@ -2,9 +2,22 @@
 
 #include "tjsNative.h"
 #include "WaveSegmentQueue.h"
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "PlatformMutex.h"
+#include "PlatformAudio.h"
 #include <atomic>
+
+/*[*/
+//---------------------------------------------------------------------------
+// Sound Global Focus Mode
+//---------------------------------------------------------------------------
+enum tTVPSoundGlobalFocusMode
+{
+    /*0*/ sgfmNeverMute,       // never mutes
+    /*1*/ sgfmMuteOnMinimize,  // will mute on the application minimize
+    /*2*/ sgfmMuteOnDeactivate // will mute on the application deactivation
+};
+//---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
 // tTVPSoundStatus
@@ -307,7 +320,7 @@ private:
     bool BufferCanControlPan;
     bool BufferCanControlFrequency;
     tjs_int Pan;               // -100000 .. 0 .. 100000
-    D3DVALUE PosX, PosY, PosZ; // 3D position
+    tTVReal PosX, PosY, PosZ; // 3D position
 
 public:
     void SetVolumeToSoundBuffer();
@@ -328,13 +341,13 @@ private:
     void Set3DPositionToBuffer();
 
 public:
-    void SetPos(D3DVALUE x, D3DVALUE y, D3DVALUE z);
-    void SetPosX(D3DVALUE v);
-    D3DVALUE GetPosX() const { return PosX; }
-    void SetPosY(D3DVALUE v);
-    D3DVALUE GetPosY() const { return PosY; }
-    void SetPosZ(D3DVALUE v);
-    D3DVALUE GetPosZ() const { return PosZ; }
+    void SetPos(tTVReal x, tTVReal y, tTVReal z);
+    void SetPosX(tTVReal v);
+    tTVReal GetPosX() const { return PosX; }
+    void SetPosY(tTVReal v);
+    tTVReal GetPosY() const { return PosY; }
+    void SetPosZ(tTVReal v);
+    tTVReal GetPosZ() const { return PosZ; }
 
 private:
     void SetFrequencyToBuffer();

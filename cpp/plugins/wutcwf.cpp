@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 #include "ncbind/ncbind.hpp"
 #include <stdio.h>
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include "TVPStorage.h"
 #define BYTE uint8_t
 #define LONG int32_t

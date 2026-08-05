@@ -4,6 +4,23 @@
 #include "tjsDictionary.h"
 
 #include "webp/decode.h"
+
+//---------------------------------------------------------------------------
+bool TVPQuickTestWEBP(tTJSBinaryStream* src)
+{
+    uint8_t header[16];
+    tjs_uint64 origSrcPos = src->GetPosition();
+    if (src->Read(header, sizeof(header)) == sizeof(header))
+    {
+        src->SetPosition(origSrcPos);
+    }
+    if (!memcmp(header, "RIFF", 4) && !memcmp(header + 8, "WEBPVP8", 7))
+    {
+        return true;
+    }
+    return false;
+}
+
 void TVPLoadWEBP(void* formatdata,
                  void* callbackdata,
                  tTVPGraphicSizeCallback sizecallback,
@@ -98,3 +115,7 @@ void TVPLoadHeaderWEBP(void* formatdata, tTJSBinaryStream* src, iTJSDispatch2** 
     val = tTJSVariant(config.input.has_alpha ? 32 : 24);
     (*dic)->PropSet(TJS_MEMBERENSURE, TJS_N("bpp"), 0, &val, (*dic));
 }
+
+// export
+tTVPRegisterGraphicInfo _webpGraphicInfo(
+    TJS_N(".webp"), TVPQuickTestWEBP, TVPLoadWEBP, TVPLoadHeaderWEBP, NULL, NULL, NULL);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WaveIntf.h"
+#include "TVPWaveManager.h"
 #include <list>
 
 #ifdef _KRKRSDL3_EMSCRIPTEN

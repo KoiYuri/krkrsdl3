@@ -1221,28 +1221,18 @@ ttstr TVPStringFromBMPUnicode(const tjs_uint16* src, tjs_int maxlen)
 }
 //---------------------------------------------------------------------------
 
-tTVPArchive* TVPOpenTARArchive(const ttstr& name, tTJSBinaryStream* st, bool normalizeFileName);
-tTVPArchive* TVPOpenZIPArchive(const ttstr& name, tTJSBinaryStream* st, bool normalizeFileName);
-tTVPArchive* TVPOpen7ZArchive(const ttstr& name, tTJSBinaryStream* st, bool normalizeFileName);
-static tTVPArchive* (*ArchiveCreators[])(const ttstr& name,
-                                         tTJSBinaryStream* st,
-                                         bool normalizeFileName) = {
-                                                                    tTVPXP3Archive::Create,
-                                                                    TVPOpenZIPArchive,
-                                                                    TVPOpen7ZArchive,
-                                                                    TVPOpenTARArchive};
-
 //---------------------------------------------------------------------------
 // TVPOpenArchive
 //---------------------------------------------------------------------------
+static std::vector<TVPArchiveCreatorFunc> ArchiveCreators = { tTVPXP3Archive::Create };
 tTVPArchive* TVPOpenArchive(const ttstr& name, bool normalizeFileName)
 {
     tTJSBinaryStream* st = TVPCreateStream(name);
     if (!st)
         return nullptr;
-    for (int i = 0; i < sizeof(ArchiveCreators) / sizeof(ArchiveCreators[0]); ++i)
+    for (int i = 0; i < ArchiveCreators.size(); ++i)
     {
-        tTVPArchive* (*creator)(const ttstr&, tTJSBinaryStream*, bool) = ArchiveCreators[i];
+        tTVPArchive* (*creator)(const ttstr&, tTJSBinaryStream*, bool) = ArchiveCreators.at(i);
         tTVPArchive* archive = creator(name, st, normalizeFileName);
         if (archive)
             return archive;
@@ -1250,6 +1240,28 @@ tTVPArchive* TVPOpenArchive(const ttstr& name, bool normalizeFileName)
     }
     delete st;
     return nullptr;
+}
+//---------------------------------------------------------------------------
+void TVPRegisterArchiveFormat(TVPArchiveCreatorFunc creator)
+{
+    if (!creator) return;
+    
+    for (auto& existing : ArchiveCreators) {
+        if (existing == creator) return;
+    }
+    
+    ArchiveCreators.push_back(creator);
+}
+//---------------------------------------------------------------------------
+void TVPUnregisterArchiveFormat(TVPArchiveCreatorFunc creator)
+{
+    for (auto it = ArchiveCreators.begin(); it != ArchiveCreators.end(); ++it)
+    {
+        if (*it == creator) {
+            ArchiveCreators.erase(it);
+            return;
+        }
+    }
 }
 //---------------------------------------------------------------------------
 int TVPCheckArchive(const ttstr& localname)

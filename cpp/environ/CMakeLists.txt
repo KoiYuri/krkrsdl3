@@ -9,7 +9,6 @@ endif()
 
 # 1.命令行
 set(KRKRSDL_ENVIRON_CONSOLE_SRC
-	${KRKRSDL_ENVIRON_PATH}/std/std_utils.cpp
     ${KRKRSDL_ENVIRON_PATH}/console/console_entry.cpp
     )
 

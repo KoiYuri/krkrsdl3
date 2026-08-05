@@ -1,75 +1,13 @@
 set(KRKRSDL_CORE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cpp/core)
 
 set(KRKRSDL_CORE_SRC
-    ${KRKRSDL_CORE_PATH}/archive/TARArchive.cpp
     ${KRKRSDL_CORE_PATH}/archive/TextStream.cpp
     ${KRKRSDL_CORE_PATH}/archive/TVPArchive.cpp
     ${KRKRSDL_CORE_PATH}/archive/TVPStorage.cpp
     ${KRKRSDL_CORE_PATH}/archive/UtilStreams.cpp
     ${KRKRSDL_CORE_PATH}/archive/XP3Archive.cpp
-    ${KRKRSDL_CORE_PATH}/archive/ZIPArchive.cpp
-    ${KRKRSDL_CORE_PATH}/archive/7zArchive.cpp
     ${KRKRSDL_CORE_PATH}/archive/encoding/gbk2unicode.c
     ${KRKRSDL_CORE_PATH}/archive/encoding/jis2unicode.c
-	${KRKRSDL_CORE_PATH}/archive/minizip/unzip.c
-	${KRKRSDL_CORE_PATH}/archive/minizip/ioapi.cpp
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zArcIn.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zBuf.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zBuf2.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zStream.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/AES.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/AESOpt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Alloc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Bcj2.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Bcj2Enc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Blake2s.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Bra.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Bra86.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/BraIA64.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/BwtSort.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/CpuArch.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Delta.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/HuffEnc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzFind.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzFindMt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzFindOpt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzmaDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Lzma2Dec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Lzma2DecMt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Lzma2Enc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzmaEnc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/LzmaLib.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/MtCoder.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/MtDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd7.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd7aDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd7Dec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd7Enc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd8.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd8Dec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Ppmd8Enc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha1.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha1Opt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha256.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha256Opt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sort.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/SwapBytes.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Threads.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Xz.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/XzDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/XzEnc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/XzIn.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zCrc.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/7zCrcOpt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/XzCrc64.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/XzCrc64Opt.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Xxh64.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/ZstdDec.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Md5.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha3.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha512.c
-    ${KRKRSDL_CORE_PATH}/archive/7zip/Sha512Opt.c
     ${KRKRSDL_CORE_PATH}/main/NativeEventQueue.cpp
     ${KRKRSDL_CORE_PATH}/main/SystemControl.cpp
     ${KRKRSDL_CORE_PATH}/main/TVPApplication.cpp
@@ -83,18 +21,15 @@ set(KRKRSDL_CORE_SRC
     ${KRKRSDL_CORE_PATH}/media/font/TVPFont.cpp
     ${KRKRSDL_CORE_PATH}/media/image/BitmapInfomation.cpp
     ${KRKRSDL_CORE_PATH}/media/image/GraphicsLoadThread.cpp
-    ${KRKRSDL_CORE_PATH}/media/image/LoadJPEG.cpp
-    ${KRKRSDL_CORE_PATH}/media/image/LoadPNG.cpp
+    ${KRKRSDL_CORE_PATH}/media/image/LoadBMP.cpp
     ${KRKRSDL_CORE_PATH}/media/image/LoadTLG.cpp
-    ${KRKRSDL_CORE_PATH}/media/image/LoadWEBP.cpp
     ${KRKRSDL_CORE_PATH}/media/image/SaveTLG5.cpp
     ${KRKRSDL_CORE_PATH}/media/image/SaveTLG6.cpp
     ${KRKRSDL_CORE_PATH}/media/image/TVPGraphicsLoader.cpp
     ${KRKRSDL_CORE_PATH}/media/movie/krmovie.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/FFWaveDecoder.cpp
-    ${KRKRSDL_CORE_PATH}/media/sound/OpusWaveDecoder.cpp
-    ${KRKRSDL_CORE_PATH}/media/sound/VorbisWaveDecoder.cpp
-    ${KRKRSDL_CORE_PATH}/media/sound/WaveIntf.cpp
+    ${KRKRSDL_CORE_PATH}/media/sound/RIFFWaveDecoder.cpp
+    ${KRKRSDL_CORE_PATH}/media/sound/TVPWaveManager.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/WaveLoopManager.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/WaveSegmentQueue.cpp
     ${KRKRSDL_CORE_PATH}/msg/TVPDebug.cpp
@@ -144,6 +79,7 @@ set(KRKRSDL_CORE_SRC
     ${KRKRSDL_CORE_PATH}/utils/TVPSettings.cpp
     ${KRKRSDL_CORE_PATH}/utils/TVPTimer.cpp
     ${KRKRSDL_CORE_PATH}/utils/VelocityTracker.cpp
+    ${KRKRSDL_CORE_PATH}/utils/WaveFormatConverter.cpp
 	${KRKRSDL_CORE_PATH}/utils/WeightFunctor.cpp
 	${KRKRSDL_CORE_PATH}/utils/math/md5.c
 )

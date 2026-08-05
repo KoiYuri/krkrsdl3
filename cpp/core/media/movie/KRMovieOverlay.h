@@ -23,14 +23,11 @@ public:
     virtual void Stop() override;
     virtual void Play() override;
     virtual void OnContinuousCallback(tjs_uint64 tick) override;
-
-protected:
-    virtual const tTVPRect& GetBounds() = 0;
 };
 
 class MoviePlayerOverlay : public VideoPresentOverlay
 {
-    tTJSNI_VideoOverlay* m_pCallbackWin = nullptr;
+    iTVPVideoCallback* m_pCallbackWin = nullptr;
 
     void OnPlayEvent(KRMovieEvent msg, void* p);
 
@@ -38,13 +35,12 @@ public:
     ~MoviePlayerOverlay();
     virtual void SetWindow(class tTJSNI_Window* window) override;
 
-    void BuildGraph(tTJSNI_VideoOverlay* callbackwin,
+    void BuildGraph(iTVPVideoCallback* callbackwin,
                     tTJSBinaryStream* stream,
                     const tjs_char* streamname,
                     const tjs_char* type,
                     uint64_t size);
 
-    virtual const tTVPRect& GetBounds() override;
     virtual void SetVisible(bool b) override;
 };
 

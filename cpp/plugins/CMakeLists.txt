@@ -3,6 +3,7 @@ set(KRKRSDL_PLUGINS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cpp/plugins)
 set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/ncbind/ncbind.cpp
     ${KRKRSDL_PLUGINS_PATH}/addFont.cpp
+    ${KRKRSDL_PLUGINS_PATH}/AlphaMovie.cpp
     ${KRKRSDL_PLUGINS_PATH}/csvParser.cpp
     ${KRKRSDL_PLUGINS_PATH}/dirlist.cpp
     ${KRKRSDL_PLUGINS_PATH}/DrawDeviceD3D.cpp
@@ -15,11 +16,11 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/gfxEffect.cpp
     ${KRKRSDL_PLUGINS_PATH}/gfxFire.cpp
     ${KRKRSDL_PLUGINS_PATH}/json.cpp
-    ${KRKRSDL_PLUGINS_PATH}/kirikiroid2.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExAreaAverage.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExBase.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExBTOA.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExImage.cpp
+    ${KRKRSDL_PLUGINS_PATH}/LayerExMovie.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExPerspective.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExRaster.cpp
     ${KRKRSDL_PLUGINS_PATH}/LayerExSave.cpp
@@ -33,7 +34,9 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/varfile.cpp
     ${KRKRSDL_PLUGINS_PATH}/win32dialog.cpp
     ${KRKRSDL_PLUGINS_PATH}/windowEx.cpp
+    ${KRKRSDL_PLUGINS_PATH}/wuopus.cpp
     ${KRKRSDL_PLUGINS_PATH}/wutcwf.cpp
+    ${KRKRSDL_PLUGINS_PATH}/wuvorbis.cpp
     ${KRKRSDL_PLUGINS_PATH}/xp3filter.cpp
     ${KRKRSDL_PLUGINS_PATH}/emoteplayer/emotefile.cpp
     ${KRKRSDL_PLUGINS_PATH}/emoteplayer/emoteplayer.cpp
@@ -62,9 +65,70 @@ set(KRKRSDL_PLUGINS_SRC
 	${KRKRSDL_PLUGINS_PATH}/sqlite3/sqlite3.c
 	${KRKRSDL_PLUGINS_PATH}/sqlite3/sqlite3.cpp
 	${KRKRSDL_PLUGINS_PATH}/sqlite3/xp3_vfs.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/kirikiroid2.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/minizip/unzip.c
+	${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/minizip/ioapi.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/TARArchive.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/ZIPArchive.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zArchive.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zArcIn.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zBuf.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zBuf2.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zStream.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/AES.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/AESOpt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Alloc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bcj2.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bcj2Enc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Blake2s.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bra.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bra86.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/BraIA64.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/BwtSort.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/CpuArch.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Delta.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/HuffEnc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzFind.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzFindMt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzFindOpt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzmaDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Lzma2Dec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Lzma2DecMt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Lzma2Enc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzmaEnc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/LzmaLib.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/MtCoder.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/MtDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd7.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd7aDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd7Dec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd7Enc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd8.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd8Dec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Ppmd8Enc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha1.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha1Opt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha256.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha256Opt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sort.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/SwapBytes.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Threads.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Xz.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/XzDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/XzEnc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/XzIn.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zCrc.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zCrcOpt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/XzCrc64.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/XzCrc64Opt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Xxh64.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/ZstdDec.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Md5.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha3.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha512.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Sha512Opt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/LoadJPEG.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/LoadPNG.cpp
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/LoadWEBP.cpp
     )
-
-if(USE_FFMPEG)
-    list(APPEND KRKRSDL_PLUGINS_SRC ${KRKRSDL_PLUGINS_PATH}/AlphaMovie.cpp)
-    list(APPEND KRKRSDL_PLUGINS_SRC ${KRKRSDL_PLUGINS_PATH}/LayerExMovie.cpp)
-endif()

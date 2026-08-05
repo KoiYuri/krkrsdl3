@@ -29,7 +29,7 @@ class tTVPThread
     static int StartProc(void* arg);
 
 public:
-    tTVPThread();
+    tTVPThread(const char* name);
     virtual ~tTVPThread();
 
     bool GetTerminated() const { return Terminated; }
@@ -78,7 +78,6 @@ void TVPAddOnThreadExitEvent(const std::function<void()>& ev);
 void TVPOnThreadExited();
 //---------------------------------------------------------------------------
 
-bool TVPIsInMainThread();
 uint64_t TVPGetCurrentThreadID();
 void TVPSleepFor(uint32_t ms);
 //---------------------------------------------------------------------------

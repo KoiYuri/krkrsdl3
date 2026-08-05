@@ -204,7 +204,20 @@ static SDL_EnumerationResult SDLCALL TVPFileinfoCb(void* userdata,
         fileinfo.ModifyTime = info.modify_time;
         fileinfo.CreationTime = info.create_time;
 
-        ctx->cb(fname, &fileinfo);
+        ttstr lowerFilename(fname);
+        // Lowercase the filename for case-insensitive auto-path lookup.
+        // NormalizePathName lowercases all lookup keys, so stored keys must match.
+        {
+            tjs_char* p = lowerFilename.Independ();
+            while (*p)
+            {
+                if (*p >= TJS_N('A') && *p <= TJS_N('Z'))
+                    *p += TJS_N('a') - TJS_N('A');
+                p++;
+            }
+        }
+
+        ctx->cb(lowerFilename.AsStdString(), &fileinfo);
     }
 
     return SDL_ENUM_CONTINUE;

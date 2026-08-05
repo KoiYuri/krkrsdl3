@@ -145,8 +145,6 @@ protected:
     bool IsVideoLayer();
     void TriggerUpdateResolution(float fps, int width, int flags);
     void SetViewMode(int iViewMode);
-    void PreInit();
-    void UnInit();
     bool Flush();
     bool IsConfigured();
     void ToggleDebug();
