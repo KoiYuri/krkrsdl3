@@ -28,7 +28,7 @@ tTVPThread::tTVPThread(const char* name)
     pthread_mutex_init(&THR_IMPL->mutex, nullptr);
     pthread_cond_init(&THR_IMPL->cond, nullptr);
     pthread_create(&THR_IMPL->thread, nullptr, (void*(*)(void*))StartProc, this);
-    pthread_setname_np(thread, name);
+    pthread_setname_np(THR_IMPL->thread, name);
 }
 
 tTVPThread::~tTVPThread()

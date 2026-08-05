@@ -196,6 +196,7 @@ void TVPLoadInternalPlugins()
     ncbAutoRegister::AllRegist();
     ncbAutoRegister::LoadModule(TJS_N("kirikiroid2.dll"));
     ncbAutoRegister::LoadModule(TJS_N("xp3filter.dll"));
+    ncbAutoRegister::LoadModule(TJS_N("wuffmpeg.dll"));
     ncbAutoRegister::LoadModule(TJS_N("wuopus.dll"));
     ncbAutoRegister::LoadModule(TJS_N("wuvorbis.dll"));
     ncbAutoRegister::LoadModule(TJS_N("win32dialog.dll"));

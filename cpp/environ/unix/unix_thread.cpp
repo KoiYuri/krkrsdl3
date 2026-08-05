@@ -82,7 +82,9 @@ tTVPThread::tTVPThread(const char* name)
     else
     {
         THR_IMPL->thread_created = true;
-        pthread_setname_np(thread, name);
+#ifndef _KRKRSDL3_EMSCRIPTEN
+        pthread_setname_np(THR_IMPL->thread, name);
+#endif
         _tvpThreadCount.fetch_add(1, std::memory_order_relaxed);
         _tvpThreadTotalCreated.fetch_add(1, std::memory_order_relaxed);
     }

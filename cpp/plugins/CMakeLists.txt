@@ -132,3 +132,7 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/LoadPNG.cpp
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/LoadWEBP.cpp
     )
+
+if(USE_FFMPEG)
+    list(APPEND KRKRSDL_PLUGINS_SRC ${KRKRSDL_PLUGINS_PATH}/wuffmpeg.cpp)
+endif()

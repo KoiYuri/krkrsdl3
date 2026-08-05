@@ -1,7 +1,4 @@
-#ifdef _KRKRSDL3_USE_FFMPEG
-
-#include "tjsCommHead.h"
-#include "FFWaveDecoder.h"
+#include "ncbind/ncbind.hpp"
 #include "TVPWaveManager.h"
 #include "TVPStorage.h"
 #include "TVPDebug.h"
@@ -13,6 +10,9 @@ extern "C"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 };
+
+
+#define NCB_MODULE_NAME TJS_N("wuffmpeg.dll")
 
 class FFWaveDecoder : public tTVPWaveDecoder // decoder interface
 {
@@ -88,17 +88,6 @@ static int64_t AVSeekFunc(void* opaque, int64_t offset, int whence)
         default:
             return stream->Seek(offset, whence & 0xFF);
     }
-}
-
-tTVPWaveDecoder* FFWaveDecoderCreator::Create(const ttstr& storagename, const ttstr& extension)
-{
-    FFWaveDecoder* decoder = new FFWaveDecoder();
-    if (!decoder->SetStream(storagename))
-    {
-        delete decoder;
-        decoder = nullptr;
-    }
-    return decoder;
 }
 
 template<typename T>
@@ -412,4 +401,29 @@ bool FFWaveDecoder::ReadPacket()
     return false;
 }
 
-#endif
+class FFWaveDecoderCreator : public tTVPWaveDecoderCreator
+{
+public:
+    tTVPWaveDecoder* Create(const ttstr& storagename, const ttstr& extension);
+};
+
+
+tTVPWaveDecoder* FFWaveDecoderCreator::Create(const ttstr& storagename, const ttstr& extension)
+{
+    FFWaveDecoder* decoder = new FFWaveDecoder();
+    if (!decoder->SetStream(storagename))
+    {
+        delete decoder;
+        decoder = nullptr;
+    }
+    return decoder;
+}
+//---------------------------------------------------------------------------
+
+static FFWaveDecoderCreator creator;
+static void _init()
+{
+    TVPRegisterWaveDecoderCreator(&creator);
+}
+
+NCB_PRE_REGIST_CALLBACK(_init);

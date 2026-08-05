@@ -244,8 +244,8 @@ public:
     void DetachVideoOverlay();
 
 public:
-    virtual void PostEvent(const NativeEvent& ev) { EventQueue.PostEvent(ev); }
-    virtual void WndProc(NativeEvent& ev);
+    virtual void PostEvent(const NativeEvent& ev) override { EventQueue.PostEvent(ev); }
+    virtual void WndProc(NativeEvent& ev) override;
     // UtilWindow's window procedure
     void ClearWndProcMessages(); // clear WndProc's message queue
 };

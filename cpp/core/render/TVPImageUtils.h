@@ -488,13 +488,13 @@ inline void WarpPerspectiveRGBA(
     
     // Inverse matrix
     double invA = (e * 1 - f * h) * invDet;
-    double invB = (f * g - d * 1) * invDet;
-    double invC = (d * h - e * g) * invDet;
-    double invD = (c * h - b * 1) * invDet;
+    double invB = (c * h - b * 1) * invDet;
+    double invC = (b * f - c * e) * invDet;
+    double invD = (f * g - d * 1) * invDet;
     double invE = (a * 1 - c * g) * invDet;
-    double invF = (b * g - a * h) * invDet;
-    double invG = (b * f - c * e) * invDet;
-    double invH = (c * d - a * f) * invDet;
+    double invF = (c * d - a * f) * invDet;
+    double invG = (d * h - e * g) * invDet;
+    double invH = (b * g - a * h) * invDet;
     double invI = (a * e - b * d) * invDet;
     
     for (int y = 0; y < dstH; ++y)

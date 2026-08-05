@@ -14,7 +14,6 @@
 #include "TVPMsg.h"
 #include "UtilStreams.h"
 
-#include "FFWaveDecoder.h"
 #include "RIFFWaveDecoder.h"
 
 //---------------------------------------------------------------------------
@@ -25,16 +24,10 @@ struct tTVPWaveDecoderManager
 {
     std::vector<tTVPWaveDecoderCreator*> Creators;
     tTVPWDC_RIFFWave RIFFWaveDecoderCreator;
-#ifdef _KRKRSDL3_USE_FFMPEG
-    FFWaveDecoderCreator ffWaveDecoderCreator;
-#endif
 
     tTVPWaveDecoderManager()
     {
         TVPWaveDecoderManagerAvail = true;
-#ifdef _KRKRSDL3_USE_FFMPEG
-        TVPRegisterWaveDecoderCreator(&ffWaveDecoderCreator);
-#endif
         TVPRegisterWaveDecoderCreator(&RIFFWaveDecoderCreator);
     }
 
@@ -72,10 +65,15 @@ tTVPWaveDecoder* TVPCreateWaveDecoder(const ttstr& storagename)
     ttstr ext(TVPExtractStorageExt(storagename));
     ext.ToLowerCase();
 
+    // .wav first
+    tTVPWaveDecoder* decoder = TVPWaveDecoderManager.Creators[0]->Create(storagename, ext);
+    if (decoder)
+        return decoder;
+
+    // other
     tjs_int i = (tjs_int)(TVPWaveDecoderManager.Creators.size() - 1);
-    for (; i >= 0; i--)
+    for (; i >= 1; i--)
     {
-        tTVPWaveDecoder* decoder;
         decoder = TVPWaveDecoderManager.Creators[i]->Create(storagename, ext);
         if (decoder)
             return decoder;
