@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <string>
 
+// 由于gpu兼容软渲染，但软渲染不兼容gpu
+// 所以对于内核我们按照krkr2/krkrz原版思路，保持完全软渲染
+// gpu加速则放入插件中，使用特殊的Layer和DrawDevice来实现
 struct TVPTextureFormat
 {
     enum e

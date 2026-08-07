@@ -33,7 +33,7 @@ set(KRKRSDL_CORE_SRC
     ${KRKRSDL_CORE_PATH}/media/sound/WaveSegmentQueue.cpp
     ${KRKRSDL_CORE_PATH}/msg/TVPDebug.cpp
     ${KRKRSDL_CORE_PATH}/msg/TVPMsg.cpp
-	${KRKRSDL_CORE_PATH}/render/gl/blend_function.cpp
+    ${KRKRSDL_CORE_PATH}/render/gl/blend_function.cpp
 	${KRKRSDL_CORE_PATH}/render/gl/tvpgl.cpp
 	${KRKRSDL_CORE_PATH}/render/ComplexRect.cpp
     ${KRKRSDL_CORE_PATH}/render/DrawDevice.cpp
@@ -41,8 +41,7 @@ set(KRKRSDL_CORE_SRC
     ${KRKRSDL_CORE_PATH}/render/LayerManager.cpp
     ${KRKRSDL_CORE_PATH}/render/LayerTreeOwner.cpp
     ${KRKRSDL_CORE_PATH}/render/MainWindowLayer.cpp
-    ${KRKRSDL_CORE_PATH}/render/RenderManager_gl.cpp
-    ${KRKRSDL_CORE_PATH}/render/RenderManager_sw.cpp
+    ${KRKRSDL_CORE_PATH}/render/RenderManager.cpp
     ${KRKRSDL_CORE_PATH}/render/TransIntf.cpp
 	${KRKRSDL_CORE_PATH}/render/TVPColor.cpp
     ${KRKRSDL_CORE_PATH}/render/TVPCompositor.cpp
