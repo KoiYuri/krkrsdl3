@@ -346,4 +346,14 @@ void TVPDestroyTexture(TVPSprite* sp)
     }
 }
 
+// TODO 或许应该和window整合起来管理
+void TVPClearAllTexture()
+{
+    for(auto sp : renderTexture)
+    {
+        TVPDestroyTexture(sp);
+    }
+    renderTexture.clear();
+}
+
 } // namespace krkrsdl3

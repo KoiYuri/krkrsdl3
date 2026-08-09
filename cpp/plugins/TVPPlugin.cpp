@@ -107,6 +107,12 @@ void TVPLoadPluigins(void)
     }
 }
 //---------------------------------------------------------------------------
+void TVPUnloadInternalPlugins();
+void TVPUnloadPlugins()
+{
+    TVPUnloadInternalPlugins();
+}
+//---------------------------------------------------------------------------
 tjs_int TVPGetAutoLoadPluginCount()
 {
     return TVPAutoLoadPluginCount;
@@ -193,7 +199,6 @@ void TVPDoTryBlock(tTVPTryBlockFunction tryblock,
 void TVPLoadInternalPlugins()
 {
     // 如果插件不冲突，实际上可以加载全部
-    ncbAutoRegister::AllRegist();
     ncbAutoRegister::LoadModule(TJS_N("kirikiroid2.dll"));
     ncbAutoRegister::LoadModule(TJS_N("xp3filter.dll"));
     ncbAutoRegister::LoadModule(TJS_N("wuffmpeg.dll"));
@@ -204,9 +209,9 @@ void TVPLoadInternalPlugins()
     ncbAutoRegister::LoadModule(TJS_N("shrinkCopy.dll"));
 }
 
-[[maybe_unused]] void TVPUnloadInternalPlugins()
+void TVPUnloadInternalPlugins()
 {
-    ncbAutoRegister::AllUnregist();
+    ncbAutoRegister::ClearRegisteredModule();
 }
 
 bool TVPLoadInternalPlugin(const ttstr& _name)

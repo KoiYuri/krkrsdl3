@@ -60,9 +60,6 @@ const tjs_char* TVPUnknownMacroName = TJS_N("Unknown macro \"%1\"");
 
 #define TVPThrowInternalError TVPThrowExceptionMessage(TVPInternalError, __FILE__, __LINE__)
 
-#undef TJS_NATIVE_SET_ClassID
-#define TJS_NATIVE_SET_ClassID ClassID_KAGParser = TJS_NCM_CLASSID;
-static tjs_int32 ClassID_KAGParser = -1;
 //---------------------------------------------------------------------------
 // tTVPScenarioCacheItem : Scenario Cache Item
 //---------------------------------------------------------------------------
@@ -307,6 +304,7 @@ tTVPScenarioCacheItem* TVPGetScenario(const ttstr& storagename, bool isstring)
     {
         TVPAddCompactEventHook(&TVPClearScenarioCacheCallback);
         TVPClearScenarioCacheCallbackInit = true;
+        TJSAddStaticToRegisterHeap([](void*) { TVPScenarioCache.Clear(); }, NULL);
     }
 
     if (isstring)
@@ -2343,198 +2341,186 @@ iTJSDispatch2* tTJSNI_KAGParser::GetMacroTopNoAddRef() const
 }
 //---------------------------------------------------------------------------
 
-static iTJSNativeInstance* Create_NI_KAGParser()
-{
-    return new tTJSNI_KAGParser();
-}
-
 //---------------------------------------------------------------------------
 // tTJSNC_KAGParser : KAGParser TJS native class
 //---------------------------------------------------------------------------
-iTJSDispatch2* TVPCreateNativeClass_KAGParser()
+tjs_uint32 tTJSNC_KAGParser::ClassID = (tjs_uint32)-1;
+tTJSNC_KAGParser::tTJSNC_KAGParser() : tTJSNativeClass(TJS_N("KAGParser"))
 {
-    tTJSNativeClassForPlugin* classobj =
-        TJSCreateNativeClassForPlugin(TJS_N("KAGParser"), Create_NI_KAGParser);
-    // register native methods/properties
-#undef TJS_NCM_REG_THIS
-#define TJS_NCM_REG_THIS classobj
-
-    TJS_BEGIN_NATIVE_MEMBERS(KAGParser)
-    TJS_DECL_EMPTY_FINALIZE_METHOD
+TJS_BEGIN_NATIVE_MEMBERS(KAGParser) TJS_DECL_EMPTY_FINALIZE_METHOD
     //----------------------------------------------------------------------
     // constructor/methods
     //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_CONSTRUCTOR_DECL(/*var.name*/ _this, /*var.type*/ tTJSNI_KAGParser,
-                                      /*TJS class name*/ KAGParser)
+    TJS_BEGIN_NATIVE_CONSTRUCTOR_DECL(/*var.name*/ _this,
+                                        /*var.type*/ tTJSNI_KAGParser,
+                                        /*TJS class name*/ KAGParser){return TJS_S_OK;
+}
+TJS_END_NATIVE_CONSTRUCTOR_DECL(/*TJS class name*/ KAGParser)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ loadScenario)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+    if (numparams < 1)
+        return TJS_E_BADPARAMCOUNT;
+    _this->LoadScenario(*param[0]);
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ loadScenario)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ goToLabel)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+    if (numparams < 1)
+        return TJS_E_BADPARAMCOUNT;
+    _this->GoToLabel(*param[0]);
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ goToLabel)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ callLabel)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+    if (numparams < 1)
+        return TJS_E_BADPARAMCOUNT;
+    _this->CallLabel(*param[0]);
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ callLabel)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ getNextTag)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+    //	if(numparams < 0) return TJS_E_BADPARAMCOUNT;
+    iTJSDispatch2* dsp = _this->GetNextTag();
+    if (dsp == NULL)
     {
-        return TJS_S_OK;
+        if (result)
+            result->Clear(); // return void ( not null )
     }
-    TJS_END_NATIVE_CONSTRUCTOR_DECL(/*TJS class name*/ KAGParser)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ loadScenario)
+    else
     {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-        if (numparams < 1)
-            return TJS_E_BADPARAMCOUNT;
-        _this->LoadScenario(*param[0]);
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ loadScenario)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ goToLabel)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-        if (numparams < 1)
-            return TJS_E_BADPARAMCOUNT;
-        _this->GoToLabel(*param[0]);
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ goToLabel)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ callLabel)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-        if (numparams < 1)
-            return TJS_E_BADPARAMCOUNT;
-        _this->CallLabel(*param[0]);
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ callLabel)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ getNextTag)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-        //	if(numparams < 0) return TJS_E_BADPARAMCOUNT;
-        iTJSDispatch2* dsp = _this->GetNextTag();
-        if (dsp == NULL)
-        {
-            if (result)
-                result->Clear(); // return void ( not null )
-        }
-        else
-        {
-            if (result)
-                *result = tTJSVariant(dsp, dsp);
-            dsp->Release();
-        }
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ getNextTag)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ assign)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        if (numparams < 1)
-            return TJS_E_BADPARAMCOUNT;
-
-        tTJSNI_KAGParser* src = NULL;
-        tTJSVariantClosure clo = param[0]->AsObjectClosureNoAddRef();
-        if (clo.Object)
-        {
-            if (TJS_FAILED(clo.Object->NativeInstanceSupport(TJS_NIS_GETINSTANCE, ClassID_KAGParser,
-                                                             (iTJSNativeInstance**)&src)))
-                TVPThrowExceptionMessage(TVPKAGSpecifyKAGParser);
-        }
-        else
-        {
-            TVPThrowExceptionMessage(TVPKAGSpecifyKAGParser);
-        }
-
-        _this->Assign(*src);
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ assign)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ clear)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        _this->Clear();
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ clear)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ store)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        iTJSDispatch2* dsp = _this->Store();
         if (result)
             *result = tTJSVariant(dsp, dsp);
         dsp->Release();
-
-        return TJS_S_OK;
     }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ store)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ restore)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
 
-        if (numparams < 1)
-            return TJS_E_BADPARAMCOUNT;
-        iTJSDispatch2* dsp = param[0]->AsObjectNoAddRef();
-
-        _this->Restore(dsp);
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ restore)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ clearCallStack)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        _this->ClearCallStack();
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ clearCallStack)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ popMacroArgs) // undoc
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        _this->PopMacroArgs();
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ popMacroArgs)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ interrupt)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        _this->Interrupt();
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ interrupt)
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ resetInterrupt)
-    {
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-
-        _this->ResetInterrupt();
-
-        return TJS_S_OK;
-    }
-    TJS_END_NATIVE_METHOD_DECL(/*func. name*/ resetInterrupt)
-    //----------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------
-
-    //----------------------------------------------------------------------
-    // properties
-    //----------------------------------------------------------------------
-    TJS_BEGIN_NATIVE_PROP_DECL(curLine){TJS_BEGIN_NATIVE_PROP_GETTER{
-        TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
-    *result = _this->GetCurLine();
     return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ getNextTag)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ assign)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    if (numparams < 1)
+        return TJS_E_BADPARAMCOUNT;
+
+    tTJSNI_KAGParser* src = NULL;
+    tTJSVariantClosure clo = param[0]->AsObjectClosureNoAddRef();
+    if (clo.Object)
+    {
+        if (TJS_FAILED(clo.Object->NativeInstanceSupport(TJS_NIS_GETINSTANCE, tTJSNC_KAGParser::ClassID,
+                                                         (iTJSNativeInstance**)&src)))
+            TVPThrowExceptionMessage(TVPKAGSpecifyKAGParser);
+    }
+    else
+    {
+        TVPThrowExceptionMessage(TVPKAGSpecifyKAGParser);
+    }
+
+    _this->Assign(*src);
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ assign)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ clear)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    _this->Clear();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ clear)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ store)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    iTJSDispatch2* dsp = _this->Store();
+    if (result)
+        *result = tTJSVariant(dsp, dsp);
+    dsp->Release();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ store)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ restore)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    if (numparams < 1)
+        return TJS_E_BADPARAMCOUNT;
+    iTJSDispatch2* dsp = param[0]->AsObjectNoAddRef();
+
+    _this->Restore(dsp);
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ restore)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ clearCallStack)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    _this->ClearCallStack();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ clearCallStack)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ popMacroArgs) // undoc
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    _this->PopMacroArgs();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ popMacroArgs)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ interrupt)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    _this->Interrupt();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ interrupt)
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ resetInterrupt)
+{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+
+    _this->ResetInterrupt();
+
+    return TJS_S_OK;
+}
+TJS_END_NATIVE_METHOD_DECL(/*func. name*/ resetInterrupt)
+//----------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// properties
+//----------------------------------------------------------------------
+TJS_BEGIN_NATIVE_PROP_DECL(curLine){TJS_BEGIN_NATIVE_PROP_GETTER{
+    TJS_GET_NATIVE_INSTANCE(/*var. name*/ _this, /*var. type*/ tTJSNI_KAGParser);
+*result = _this->GetCurLine();
+return TJS_S_OK;
 }
 TJS_END_NATIVE_PROP_GETTER
 
@@ -2711,8 +2697,15 @@ TJS_END_NATIVE_PROP_DECL(multiLineTagEnabled)
 
 //----------------------------------------------------------------------
 TJS_END_NATIVE_MEMBERS
-
-return classobj;
 }
-#undef TJS_NATIVE_CLASSID_NAME
+
+tTJSNativeInstance* tTJSNC_KAGParser::CreateNativeInstance()
+{
+    return new tTJSNI_KAGParser();
+}
+
+iTJSDispatch2* TVPCreateNativeClass_KAGParser()
+{
+    return new tTJSNC_KAGParser();
+}
 //---------------------------------------------------------------------------

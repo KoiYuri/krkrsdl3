@@ -15,6 +15,7 @@
 
 #include "TVPPlugin.h"
 
+//---------------------------------------------------------------------------
 void TVPLoadPlugin(const ttstr& name);
 bool TVPUnloadPlugin(const ttstr& name);
 extern std::set<ttstr> TVPRegisteredPlugins;
@@ -59,8 +60,8 @@ extern void TVPDoTryBlock(tTVPTryBlockFunction tryblock,
                           void* data);
 
 //---------------------------------------------------------------------------
-extern bool TVPPluginUnloadedAtSystemExit;
 extern void TVPLoadPluigins(void);
+extern void TVPUnloadPlugins(void);
 //---------------------------------------------------------------------------
 
 #endif

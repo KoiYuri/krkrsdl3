@@ -66,6 +66,6 @@ tjs_uint64 TVPGetRoughTickCount();
 void TVPShowIME(int x, int y, int w, int h);
 void TVPHideIME();
 //
-void TVPExitApplication(int code);
+void TVPAbortApplication(int code);
 //
 void TVPInvokeMenu(int x, int y, void* _menu = NULL);

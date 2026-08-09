@@ -29,6 +29,7 @@ set(KRKRSDL_CORE_SRC
     ${KRKRSDL_CORE_PATH}/media/movie/krmovie.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/RIFFWaveDecoder.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/TVPWaveManager.cpp
+    ${KRKRSDL_CORE_PATH}/media/sound/WaveDecodeThread.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/WaveLoopManager.cpp
     ${KRKRSDL_CORE_PATH}/media/sound/WaveSegmentQueue.cpp
     ${KRKRSDL_CORE_PATH}/msg/TVPDebug.cpp

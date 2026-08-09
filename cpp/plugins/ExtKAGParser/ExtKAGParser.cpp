@@ -345,6 +345,7 @@ static tExtTVPScenarioCacheItem* TVPGetScenario(const ttstr& storagename, bool i
     {
         TVPAddCompactEventHook(&TVPClearScenarioCacheCallback);
         TVPClearScenarioCacheCallbackInit = true;
+        TJSAddStaticToRegisterHeap([](void*) { TVPScenarioCache.Clear(); }, NULL);
     }
 
     if (isstring)

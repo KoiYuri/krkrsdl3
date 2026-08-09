@@ -18,12 +18,8 @@
 #include <cstdio>
 
 //---------------------------------------------------------------------------
-void TVPExitApplication(int code)
+void TVPAbortApplication(int code)
 {
-    // clear some static data for memory leak detect
-    TVPDeliverCompactEvent(TVP_COMPACT_LEVEL_MAX);
-    if (!TVPIsSoftwareRenderManager())
-        iTVPTexture2D::RecycleProcess();
     exit(code);
 }
 //---------------------------------------------------------------------------

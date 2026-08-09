@@ -598,26 +598,7 @@ TJS_END_NATIVE_MEMBERS
 //---------------------------------------------------------------------------
 // TVPCreateNativeClass_Bitmap
 //---------------------------------------------------------------------------
-struct tBitmapClassHolder
-{
-    tTJSNativeClass* Obj;
-    tBitmapClassHolder() : Obj(NULL) {}
-    void Set(tTJSNativeClass* obj)
-    {
-        if (Obj)
-        {
-            Obj->Release();
-            Obj = NULL;
-        }
-        Obj = obj;
-        Obj->AddRef();
-    }
-    ~tBitmapClassHolder()
-    {
-        if (Obj)
-            Obj->Release(), Obj = NULL;
-    }
-} static bitmapclassholder;
+static tTJSNativeClass* _bitmapclass = NULL;
 //---------------------------------------------------------------------------
 tTJSNativeInstance* tTJSNC_Bitmap::CreateNativeInstance()
 {
@@ -626,13 +607,12 @@ tTJSNativeInstance* tTJSNC_Bitmap::CreateNativeInstance()
 //---------------------------------------------------------------------------
 iTJSDispatch2* TVPCreateBitmapObject()
 {
-    if (bitmapclassholder.Obj == NULL)
+    if (_bitmapclass == NULL)
     {
         TVPThrowInternalError;
     }
     iTJSDispatch2* out;
-    if (TJS_FAILED(
-            bitmapclassholder.Obj->CreateNew(0, NULL, NULL, &out, 0, NULL, bitmapclassholder.Obj)))
+    if (TJS_FAILED(_bitmapclass->CreateNew(0, NULL, NULL, &out, 0, NULL, _bitmapclass)))
         TVPThrowInternalError;
 
     return out;
@@ -640,14 +620,15 @@ iTJSDispatch2* TVPCreateBitmapObject()
 //---------------------------------------------------------------------------
 tTJSNativeClass* TVPCreateNativeClass_Bitmap()
 {
-    if (bitmapclassholder.Obj)
+    if (_bitmapclass)
     {
-        tTJSNativeClass* bmpclass = bitmapclassholder.Obj;
-        bmpclass->AddRef();
-        return bmpclass;
+        _bitmapclass->AddRef();
+        return _bitmapclass;
     }
-    tTJSNativeClass* bmpclass = new tTJSNC_Bitmap();
-    bitmapclassholder.Set(bmpclass);
-    return bmpclass;
+        
+    _bitmapclass = new tTJSNC_Bitmap();
+    _bitmapclass->AddRef();
+    TJS_REGISTER_STATIC_HEAP(_bitmapclass);
+    return _bitmapclass;
 }
 //---------------------------------------------------------------------------

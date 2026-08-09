@@ -359,6 +359,7 @@ static void TVPClearTransHandlerProvider()
 {
     // called at system shutdown
     TVPTransHandlerProviders.Clear();
+    TVPTransHandlerProviderInit = true;
 }
 static tTVPAtExit TVPClearTransHandlerProviderAtExit(TVP_ATEXIT_PRI_SHUTDOWN,
                                                      TVPClearTransHandlerProvider);

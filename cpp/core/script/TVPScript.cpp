@@ -469,10 +469,10 @@ psexcl		:%[type:ltPsExclusion		],\
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
-// global variables
+// local variables
 //---------------------------------------------------------------------------
-tTJS* TVPScriptEngine = NULL;
-ttstr TVPStartupScriptName(TJS_N("startup.tjs"));
+static tTJS* TVPScriptEngine = NULL;
+static ttstr TVPStartupScriptName(TJS_N("startup.tjs"));
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
@@ -498,13 +498,8 @@ class tTVPTJSGCCallback : public tTVPCompactEventCallbackIntf
 //---------------------------------------------------------------------------
 // TVPInitScriptEngine
 //---------------------------------------------------------------------------
-static bool TVPScriptEngineInit = false;
 void TVPInitScriptEngine()
 {
-    if (TVPScriptEngineInit)
-        return;
-    TVPScriptEngineInit = true;
-
     tTJSVariant val;
 
     // Set eval expression mode
@@ -643,15 +638,13 @@ void TVPInitScriptEngine()
 //---------------------------------------------------------------------------
 // TVPUninitScriptEngine
 //---------------------------------------------------------------------------
-static bool TVPScriptEngineUninit = false;
 void TVPUninitScriptEngine()
 {
-    if (TVPScriptEngineUninit)
-        return;
-    TVPScriptEngineUninit = true;
-
-    // TVPScriptEngine->Shutdown();
-    TVPScriptEngine->Release();
+    TVPRemoveCompactEventHook(&TVPTJSGCCallback);
+    
+    TVPScriptEngine->DoGarbageCollection();
+    delete TVPScriptEngine;
+    // 回收不了的object以后想办法
     /*
             Objects, theirs lives are contolled by reference counter, may not be all
             freed here in some occations.
@@ -666,7 +659,6 @@ void TVPUninitScriptEngine()
 void TVPRestartScriptEngine()
 {
     TVPUninitScriptEngine();
-    TVPScriptEngineInit = false;
     TVPInitScriptEngine();
 }
 //---------------------------------------------------------------------------
@@ -1335,7 +1327,7 @@ void TVPStartObjectHashMap()
 //---------------------------------------------------------------------------
 void TVPBeforeProcessUnhandledException()
 {
-    TVPDumpHWException();
+    
 }
 //---------------------------------------------------------------------------
 

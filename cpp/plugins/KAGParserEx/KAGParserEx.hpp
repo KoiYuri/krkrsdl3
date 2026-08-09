@@ -378,14 +378,14 @@ public:
 };
 
 //---------------------------------------------------------------------------
-// tTJSNC_KAGParser
+// tTJSNC_KAGParserEx
 //---------------------------------------------------------------------------
-class tTJSNC_KAGParser : public tTJSNativeClass
+class tTJSNC_KAGParserEx : public tTJSNativeClass
 {
     typedef tTJSNativeClass inherited;
 
 public:
-    tTJSNC_KAGParser();
+    tTJSNC_KAGParserEx();
 
     static tjs_uint32 ClassID;
 

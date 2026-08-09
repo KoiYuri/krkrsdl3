@@ -330,7 +330,7 @@ struct XP3FilterDecoder
     ~XP3FilterDecoder()
     {
         if (ScriptEngine)
-            ScriptEngine->Release();
+            delete ScriptEngine;
     }
 };
 

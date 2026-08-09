@@ -69,6 +69,7 @@ static void* RenderThreadProc(void* data)
         const char* args[2] = {"./krkrsdl3", gamePath};
         TVPParseArguments(2, (char**)args);
     }
+    Application = new tTVPApplication;
     if (!::Application->StartApplication()) {
         OH_LOG_ERROR(LOG_APP, "StartApplication failed");
         g_running = false;
@@ -77,17 +78,23 @@ static void* RenderThreadProc(void* data)
     g_running = true;
 
     while (g_running) {
-        ::Application->Run();
-        iTVPTexture2D::RecycleProcess();
+        if(!::Application->Run())
+            break;
         krkrsdl3::TVPRenderOnce(winWidth, winHeight);
         eglSwapBuffers(g_eglDisplay, g_eglSurface);
     }
+    
+    ::Application->OnExit();
+    delete Application;
+    Application = NULL;
 
     eglMakeCurrent(g_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroySurface(g_eglDisplay, g_eglSurface);
     eglDestroyContext(g_eglDisplay, g_eglContext);
     eglTerminate(g_eglDisplay);
     if(gamePath) free((void*)gamePath);
+    TVPClearAllArguments();
+    exit(0);
     return nullptr;
 }
 

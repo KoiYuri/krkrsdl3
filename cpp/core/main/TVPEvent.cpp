@@ -1012,7 +1012,7 @@ void TVPRemoveContinuousHandler(tTJSVariantClosure clo)
 // these are to reduce memory usage, like garbage collection, cache cleaning,
 // or etc ...
 //---------------------------------------------------------------------------
-static std::vector<tTVPCompactEventCallbackIntf*> TVPCompactEventVector;
+static std::vector<tTVPCompactEventCallbackIntf*> TVPCompactEventVector; // TODO 全静态生命周期？
 bool TVPEnableGlobalHeapCompaction = false;
 //---------------------------------------------------------------------------
 void TVPAddCompactEventHook(tTVPCompactEventCallbackIntf* cb)

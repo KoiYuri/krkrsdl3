@@ -53,7 +53,8 @@ static struct t_timer_idx
         uint64_t _idx;
     };
     t_timer_idx(uint64_t idx) : _idx(idx) {}
-} _timer_idx(TVPGetRoughTickCount());
+} _timer_idx(0);
+static tTVPTimerImpl _processedTimer;
 
 void tTVPTimerImpl::Set()
 {
@@ -95,8 +96,6 @@ void tTVPTimerImpl::Set(int idx)
     idx += _timer_idx._idx_v5;
     _timer_v5[idx].Add(this);
 }
-
-static tTVPTimerImpl _processedTimer;
 
 void tTVPTimerImpl::FireNext()
 {
@@ -214,3 +213,33 @@ void TVPTimer::UpdateTimer()
         impl_->Set();
     }
 }
+
+void TVPResetTimerSystem()
+{
+    _timer_idx._idx = TVPGetRoughTickCount();
+}
+
+static tTVPAtExit TVPClearTimerSystemAtExit(TVP_ATEXIT_PRI_CLEANUP,
+                                                [](){auto clearList = [](tTVPTimerImpl* head) {
+        tTVPTimerImpl* p = head->Next;
+        head->Next = nullptr;
+        head->Prev = nullptr;
+        while (p) {
+            tTVPTimerImpl* next = p->Next;
+            p->Next = nullptr;
+            p->Prev = nullptr;
+            p->pTimer = nullptr;
+            p = next;
+        }
+    };
+
+    for (int i = 0; i < 256; ++i) {
+        clearList(&_timer_v1[i]);
+    }
+    for (int i = 0; i < 64; ++i) {
+        clearList(&_timer_v2[i]);
+        clearList(&_timer_v3[i]);
+        clearList(&_timer_v4[i]);
+        clearList(&_timer_v5[i]);
+    }
+    clearList(&_processedTimer);});

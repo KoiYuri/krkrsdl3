@@ -862,22 +862,22 @@ tjs_int32 TJSGetDictionaryClassID()
 //---------------------------------------------------------------------------
 // TJSCreateDictionaryObject
 //---------------------------------------------------------------------------
+static tTJSNativeClass* _dictionaryclass = NULL;
 iTJSDispatch2* TJSCreateDictionaryObject(iTJSDispatch2** classout)
 {
-    // create a Dictionary object
-    struct tHolder
+    if (!_dictionaryclass)
     {
-        iTJSDispatch2* Obj;
-        tHolder() { Obj = new tTJSDictionaryClass(); }
-        ~tHolder() { Obj->Release(); }
-    } static dictionaryclass;
+        // create a Dictionary object
+        _dictionaryclass = new tTJSDictionaryClass();
+        TJS_REGISTER_STATIC_HEAP(_dictionaryclass);
+    }
 
     if (classout)
-        *classout = dictionaryclass.Obj, dictionaryclass.Obj->AddRef();
+        *classout = _dictionaryclass, _dictionaryclass->AddRef();
 
     tTJSDictionaryObject* dictionaryobj;
-    (dictionaryclass.Obj)
-        ->CreateNew(0, NULL, NULL, (iTJSDispatch2**)&dictionaryobj, 0, NULL, dictionaryclass.Obj);
+    (_dictionaryclass)
+        ->CreateNew(0, NULL, NULL, (iTJSDispatch2**)&dictionaryobj, 0, NULL, _dictionaryclass);
     return dictionaryobj;
 }
 //---------------------------------------------------------------------------

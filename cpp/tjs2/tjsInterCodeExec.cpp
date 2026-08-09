@@ -676,8 +676,6 @@ void tTJSVariantArrayStack::InternalCompact(void)
 //---------------------------------------------------------------------------
 inline tTJSVariant* tTJSVariantArrayStack::Allocate(tjs_int num)
 {
-    //		tTJSCSH csh(CS);
-
     if (!OperationDisabledCount && num < TJS_VA_ONE_ALLOC_MAX)
     {
         if (!Current || Current->Using + num > Current->Allocated)
@@ -696,8 +694,6 @@ inline tTJSVariant* tTJSVariantArrayStack::Allocate(tjs_int num)
 //---------------------------------------------------------------------------
 inline void tTJSVariantArrayStack::Deallocate(tjs_int num, tTJSVariant* ptr)
 {
-    //		tTJSCSH csh(CS);
-
     if (!OperationDisabledCount && num < TJS_VA_ONE_ALLOC_MAX)
     {
         Current->Using -= num;
@@ -721,16 +717,6 @@ inline void tTJSVariantArrayStack::Deallocate(tjs_int num, tTJSVariant* ptr)
     }
 }
 //---------------------------------------------------------------------------
-// static tjs_int TJSVariantArrayStackRefCount = 0;
-//---------------------------------------------------------------------------
-void tTJSInterCodeContext::TJSVariantArrayStackAddRef()
-{
-}
-//---------------------------------------------------------------------------
-void tTJSInterCodeContext::TJSVariantArrayStackRelease()
-{
-}
-//---------------------------------------------------------------------------
 void TJSVariantArrayStackCompact()
 {
     TJSCompactVariantArrayMagic++;
@@ -752,7 +738,6 @@ void tTJSInterCodeContext::ExecuteAsFunction(iTJSDispatch2* objthis,
                                              tjs_int start_ip)
 {
     tjs_int num_alloc = MaxVariableCount + VariableReserveCount + 1 + MaxFrameCount;
-    TJSVariantArrayStackAddRef();
 
     try
     {
@@ -880,14 +865,8 @@ void tTJSInterCodeContext::ExecuteAsFunction(iTJSDispatch2* objthis,
     }
     catch (...)
     {
-        //		if(objthis) objthis->Release();
-        //		Release();
-        TJSVariantArrayStackRelease();
         throw;
     }
-    //	if(objthis) objthis->Release();
-    //	Release();
-    TJSVariantArrayStackRelease();
 }
 //---------------------------------------------------------------------------
 void tTJSInterCodeContext::DisplayExceptionGeneratedCode(tjs_int codepos, const tTJSVariant* ra)

@@ -294,6 +294,7 @@ static tTVPScenarioCacheItemEX* TVPGetScenario(const ttstr& storagename, bool is
     {
         TVPAddCompactEventHook(&TVPClearScenarioCacheCallback);
         TVPClearScenarioCacheCallbackInit = true;
+        TJSAddStaticToRegisterHeap([](void*) { TVPScenarioCache.Clear(); }, NULL);
     }
 
     if (isstring)
@@ -2579,8 +2580,8 @@ iTJSDispatch2* tTJSNI_KAGParserEX::GetMacroTopNoAddRef() const
 //---------------------------------------------------------------------------
 // tTJSNC_KAGParser : KAGParser TJS native class
 //---------------------------------------------------------------------------
-tjs_uint32 tTJSNC_KAGParser::ClassID = (tjs_uint32)-1;
-tTJSNC_KAGParser::tTJSNC_KAGParser()
+tjs_uint32 tTJSNC_KAGParserEx::ClassID = (tjs_uint32)-1;
+tTJSNC_KAGParserEx::tTJSNC_KAGParserEx()
   : tTJSNativeClass(TJS_N("KAGParser")){
         // register native methods/properties
 
@@ -2662,7 +2663,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ assign)
     if (clo.Object)
     {
         if (TJS_FAILED(clo.Object->NativeInstanceSupport(
-                TJS_NIS_GETINSTANCE, tTJSNC_KAGParser::ClassID, (iTJSNativeInstance**)&src)))
+                TJS_NIS_GETINSTANCE, tTJSNC_KAGParserEx::ClassID, (iTJSNativeInstance**)&src)))
             TVPThrowExceptionMessage(TVP_KAGPARSER_MESSAGEMAP(TVPKAGEXSpecifyKAGParser));
     }
     else
@@ -2978,7 +2979,7 @@ TJS_END_NATIVE_PROP_DECL(multiLineTagEnabled)
 TJS_END_NATIVE_MEMBERS
 }
 //---------------------------------------------------------------------------
-tTJSNativeInstance* tTJSNC_KAGParser::CreateNativeInstance()
+tTJSNativeInstance* tTJSNC_KAGParserEx::CreateNativeInstance()
 {
     return new tTJSNI_KAGParserEX();
 }
@@ -2986,5 +2987,5 @@ tTJSNativeInstance* tTJSNC_KAGParser::CreateNativeInstance()
 
 tTJSNativeClass* TVPCreateNativeClass_KAGParserEX()
 {
-    return new tTJSNC_KAGParser();
+    return new tTJSNC_KAGParserEx();
 }

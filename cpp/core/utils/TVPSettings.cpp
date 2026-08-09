@@ -163,6 +163,18 @@ bool TVPParseArguments(int argc, char* argv[])
 
     return true;
 }
+void TVPClearAllArguments()
+{
+    TVPProgramArguments.clear();
+    TVPNativeExeName.Clear();
+    TVPNativeExeDir.Clear();
+    TVPNativeProjectData.Clear();
+    TVPNativeProjectDir.Clear();
+    TVPNativeDataPath.Clear();
+    TVPProjectData.Clear();
+    TVPProjectDir.Clear();
+    TVPDataPath.Clear();
+}
 bool TVPGetCommandLine(const tjs_char* name, tTJSVariant* value)
 {
     tjs_int namelen = (tjs_int)TJS_strlen(name);

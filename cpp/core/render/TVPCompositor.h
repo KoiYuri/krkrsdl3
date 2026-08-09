@@ -20,4 +20,6 @@ void TVPRenderOnce(int winWidth, int winHeight);
 void TVPCreateTexture(TVPSprite& sp);
 void TVPUpdateTexture(TVPSprite* sp, uint8_t* buff, int width, int height, int pitch);
 void TVPDestroyTexture(TVPSprite* sp);
+// 清理合成器中所有窗口贴图
+void TVPClearAllTexture();
 } // namespace krkrsdl3

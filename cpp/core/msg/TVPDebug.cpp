@@ -62,6 +62,7 @@ static void TVPDestroyLogObjects()
         delete TVPLogDeque, TVPLogDeque = NULL;
     if (TVPImportantLogs)
         delete TVPImportantLogs, TVPImportantLogs = NULL;
+    TVPLogObjectsInitialized = false;
 }
 //---------------------------------------------------------------------------
 tTVPAtExit TVPDestroyLogObjectsAtExit(TVP_ATEXIT_PRI_CLEANUP, TVPDestroyLogObjects);

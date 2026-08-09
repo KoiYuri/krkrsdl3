@@ -306,6 +306,9 @@ void TVPShutdownArchiveHandleCache()
             delete TVPArchiveHandleCachePool[i].Stream;
     }
     delete[] TVPArchiveHandleCachePool;
+    TVPArchiveHandleCachePool = NULL;
+    TVPArchiveHandleCacheInit = false;
+    TVPArchiveHandleCacheShutdown = false;
 }
 //---------------------------------------------------------------------------
 static tTVPAtExit TVPShutdownArchiveCacheAtExit(TVP_ATEXIT_PRI_CLEANUP,

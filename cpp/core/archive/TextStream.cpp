@@ -555,6 +555,7 @@ public:
             tjs_char* bufS = targ.AllocBuffer(BufferLen);
             TVPWideCharToUtf8String(buf, bufS);
             bufS[BufferLen] = 0;
+            delete[] buf;
             targ.FixLen();
             return read;
         }

@@ -12,8 +12,6 @@
 #define SysInitImplH
 
 //---------------------------------------------------------------------------
-extern void TVPDumpHWException();
-
 extern void TVPInitializeBaseSystems();
 
 extern bool TVPProjectDirSelected;

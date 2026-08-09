@@ -17,7 +17,6 @@
 #endif
 
 #include "TVPApplication.h"
-#include "RenderManager.h"
 #include "WindowIntf.h"
 #include "Platform.h"
 #include "MainWindowLayer.h"
@@ -32,10 +31,11 @@
 #endif
 #endif
 
+#define winWidth 1280
+#define winHeight 720
 static SDL_Window* tvp_window;
 static SDL_Renderer* tvp_renderer = NULL;
 static SDL_GLContext tvp_glContext = NULL;
-static int winWidth = 1280, winHeight = 720;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 {
@@ -114,6 +114,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     SDL_DestroyProperties(props);
 
     // 启动游戏
+    Application = new tTVPApplication;
     if (!::Application->StartApplication())
     {
         SDL_Log("Game Start Failed.");
@@ -415,8 +416,8 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
 
 SDL_AppResult SDL_AppIterate(void* appstate)
 {
-    ::Application->Run();
-    iTVPTexture2D::RecycleProcess();
+    if (!::Application->Run())
+        return SDL_APP_SUCCESS;
     // 写入缓冲区
     int RW = 1280, RH = 720;
     SDL_GetWindowSize(tvp_window, &RW, &RH);
@@ -448,9 +449,17 @@ SDL_AppResult SDL_Fail()
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
+    ::Application->OnExit();
+    delete Application;
+    Application = NULL;
+    if (TVPSettings.renderer == "opengl")
+        SDL_GL_DestroyContext(tvp_glContext);
+    else
+        SDL_DestroyRenderer(tvp_renderer);
     SDL_DestroyWindow(tvp_window);
-    SDL_Log("Game quit successfully!");
+    SDL_Log("KRKRSDL3 quit successfully!");
     SDL_Quit();
+    TVPClearAllArguments();
 }
 
 void TVPSetWindowTitle(const char* title)

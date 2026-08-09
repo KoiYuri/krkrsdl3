@@ -60,17 +60,18 @@ TJS_END_NATIVE_STATIC_PROP_DECL(visible)
 TJS_END_NATIVE_MEMBERS
 }
 //---------------------------------------------------------------------------
+static tTJSNativeClass* _controllerclass = NULL;
 static iTJSDispatch2* TVPGetControllerClass()
 {
-    struct tClassHolder
+    if (_controllerclass)
     {
-        iTJSDispatch2* Object;
-        tClassHolder() { Object = new tTJSNC_Controller(); }
-        ~tClassHolder() { Object->Release(); }
-    } static Holder;
-
-    Holder.Object->AddRef();
-    return Holder.Object;
+        _controllerclass->AddRef();
+        return _controllerclass;
+    }
+    _controllerclass = new tTJSNC_Controller();
+    _controllerclass->AddRef();
+    TJS_REGISTER_STATIC_HEAP(_controllerclass);
+    return _controllerclass;
 }
 //---------------------------------------------------------------------------
 
@@ -124,17 +125,18 @@ TJS_END_NATIVE_STATIC_PROP_DECL(visible)
 TJS_END_NATIVE_MEMBERS
 }
 //---------------------------------------------------------------------------
+static tTJSNativeClass* _consoleclass = NULL;
 static iTJSDispatch2* TVPGetConsoleClass()
 {
-    struct tClassHolder
+    if (_consoleclass)
     {
-        iTJSDispatch2* Object;
-        tClassHolder() { Object = new tTJSNC_Console(); }
-        ~tClassHolder() { Object->Release(); }
-    } static Holder;
-
-    Holder.Object->AddRef();
-    return Holder.Object;
+        _consoleclass->AddRef();
+        return _consoleclass;
+    }
+    _consoleclass = new tTJSNC_Console();
+    _consoleclass->AddRef();
+    TJS_REGISTER_STATIC_HEAP(_consoleclass);
+    return _consoleclass;
 }
 //---------------------------------------------------------------------------
 

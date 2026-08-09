@@ -967,3 +967,18 @@ tTJSNI_Window *TVPGetActiveWindow()
 	if (!_currentWindowLayer) return nullptr;
 	return _currentWindowLayer->GetWindow();
 }
+
+void TVPClearAllWindows()
+{
+    while (_firstWindowLayer)
+    {
+        TVPWindowLayer* next = _firstWindowLayer->_nextWindow;
+        delete _firstWindowLayer;
+        _firstWindowLayer = next;
+    }
+
+    // 确保所有指针都被置空
+    _firstWindowLayer = nullptr;
+    _lastWindowLayer = nullptr;
+    _currentWindowLayer = nullptr;
+}

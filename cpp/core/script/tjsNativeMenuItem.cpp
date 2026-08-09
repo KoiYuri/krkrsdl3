@@ -486,31 +486,34 @@ tTJSNI_BaseMenuItem* tTJSNI_BaseMenuItem::GetRootMenuItem() const
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
+static tTJSNativeClass* _menuitemclass = NULL;
+static iTJSDispatch2* textToKeycodeMap = nullptr;
+static iTJSDispatch2* keycodeToTextList = nullptr;
 iTJSDispatch2* TVPCreateMenuItemObject(iTJSDispatch2* window)
 {
-    struct tHolder
+    if (!_menuitemclass)
     {
-        iTJSDispatch2* Obj;
-        tHolder() { Obj = new tTJSNC_MenuItem(); }
-        ~tHolder() { Obj->Release(); }
-    } static menuitemclass;
+        _menuitemclass = new tTJSNC_MenuItem();
+        TJS_REGISTER_STATIC_HEAP(_menuitemclass);
+        TJS_REGISTER_STATIC_HEAP(textToKeycodeMap);
+        TJS_REGISTER_STATIC_HEAP(textToKeycodeMap);
+    }
 
     iTJSDispatch2* out;
     tTJSVariant param(window);
     tTJSVariant* pparam[2] = {&param, &param};
-    if (TJS_FAILED(menuitemclass.Obj->CreateNew(0, NULL, NULL, &out, 2, pparam, menuitemclass.Obj)))
+    if (TJS_FAILED(_menuitemclass->CreateNew(0, NULL, NULL, &out, 2, pparam, _menuitemclass)))
         TVPThrowExceptionMessage(TVPInternalError, TJS_N("TVPCreateMenuItemObject"));
 
     return out;
 }
 //---------------------------------------------------------------------------
 
-static iTJSDispatch2* textToKeycodeMap = nullptr;
-static iTJSDispatch2* keycodeToTextList = nullptr;
-
 static std::map<tTVInteger, iTJSDispatch2*> MENU_LIST;
 static void AddMenuDispatch(tTVInteger hWnd, iTJSDispatch2* menu)
 {
+    if (MENU_LIST.size() == 0)
+        TJSAddStaticToRegisterHeap([](void*) { MENU_LIST.clear(); }, NULL);
     MENU_LIST.insert(std::map<tTVInteger, iTJSDispatch2*>::value_type(hWnd, menu));
 }
 iTJSDispatch2* TVPGetMenuDispatch(tTVInteger hWnd)
@@ -521,10 +524,6 @@ iTJSDispatch2* TVPGetMenuDispatch(tTVInteger hWnd)
         return i->second;
     }
     return NULL;
-}
-static void DelMenuDispatch(tTVInteger hWnd)
-{
-    MENU_LIST.erase(hWnd);
 }
 static bool _IsWindow(tTVInteger hWnd)
 {

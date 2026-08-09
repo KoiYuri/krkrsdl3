@@ -5,6 +5,7 @@
 #include "WindowIntf.h"
 #include "ncbind/ncbind.hpp"
 #include "PlatformFile.h"
+#include "TVPSettings.h"
 
 #include "tjsNativeLayer.h"
 

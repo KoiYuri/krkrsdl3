@@ -241,7 +241,23 @@ void tTJSNI_RegExp::Split(iTJSDispatch2** array, const ttstr& target, bool purge
 //---------------------------------------------------------------------------
 // tTJSNC_RegExp : TJS Native Class : RegExp
 //---------------------------------------------------------------------------
-tTJSVariant tTJSNC_RegExp::LastRegExp;
+static tTJSVariant* LastRegExp = NULL;
+tTJSVariant* GetLastRegExp()
+{
+    if (!LastRegExp)
+    {
+        LastRegExp = new tTJSVariant;
+        TJSAddStaticToRegisterHeap(
+            [](void* addr)
+            {
+                // 让它泄漏吧，我也不知如何处理
+                tTJSVariant** cls = (tTJSVariant**)addr;
+                *cls = NULL;
+            },
+            &LastRegExp);
+    }
+    return LastRegExp;
+}
 //---------------------------------------------------------------------------
 tjs_uint32 tTJSNC_RegExp::ClassID = (tjs_uint32)-1;
 tTJSNC_RegExp::tTJSNC_RegExp()
@@ -360,7 +376,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ test)
     bool matched = tTJSNC_RegExp::Exec(region, target, _this);
     onig_region_free(region, 1);
 
-    tTJSNC_RegExp::LastRegExp = tTJSVariant(objthis, objthis);
+    *(GetLastRegExp()) = tTJSVariant(objthis, objthis);
 
     if (result)
     {
@@ -423,7 +439,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ exec)
     tTJSNC_RegExp::Exec(region, target, _this);
     onig_region_free(region, 1);
 
-    tTJSNC_RegExp::LastRegExp = tTJSVariant(objthis, objthis);
+    *(GetLastRegExp()) = tTJSVariant(objthis, objthis);
 
     if (result)
     {
@@ -615,7 +631,7 @@ TJS_DENY_NATIVE_PROP_SETTER
 }
 TJS_END_NATIVE_PROP_DECL(rightContext)
 //---------------------------------------------------------------------------
-TJS_BEGIN_NATIVE_PROP_DECL(last){TJS_BEGIN_NATIVE_PROP_GETTER{* result = tTJSNC_RegExp::LastRegExp;
+TJS_BEGIN_NATIVE_PROP_DECL(last){TJS_BEGIN_NATIVE_PROP_GETTER{* result = *(GetLastRegExp());
 ;
 return TJS_S_OK;
 }

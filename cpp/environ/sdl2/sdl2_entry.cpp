@@ -300,10 +300,10 @@ static void ProcessEvent(SDL_Event* event)
     }
 }
 
-static void RenderFrame()
+static bool RenderFrame()
 {
-    ::Application->Run();
-    iTVPTexture2D::RecycleProcess();
+    if(!::Application->Run())
+        return false;
     int RW = 1280, RH = 720;
     SDL_GetWindowSize(tvp_window, &RW, &RH);
     if (TVPSettings.renderer == "opengl")
@@ -318,6 +318,7 @@ static void RenderFrame()
         krkrsdl3::TVPRenderOnce(RW, RH);
         SDL_RenderPresent(tvp_renderer);
     }
+    return true;
 }
 
 int main(int argc, char* argv[])
@@ -391,6 +392,7 @@ int main(int argc, char* argv[])
 
     SDL_HideWindow(tvp_window);
 
+    Application = new tTVPApplication;
     if (!::Application->StartApplication())
     {
         SDL_Log("Game Start Failed.");
@@ -416,12 +418,17 @@ int main(int argc, char* argv[])
                 running = false;
             ProcessEvent(&event);
         }
-        RenderFrame();
+        if(!RenderFrame())
+            break;
     }
 
+    ::Application->OnExit();
+    delete Application;
+    Application = NULL;
     SDL_DestroyWindow(tvp_window);
-    SDL_Log("Game quit successfully!");
+    SDL_Log("KRKRSDL2 quit successfully!");
     SDL_Quit();
+    TVPClearAllArguments();
     return 0;
 }
 

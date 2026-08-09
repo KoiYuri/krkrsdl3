@@ -138,6 +138,7 @@ public:
     inline tjs_uint64 GetInitialTimeoutValue(void) const { return totalWaitTime; }
     inline tjs_uint64 GetStartTime(void) const { return startTime; }
 };
-
+//---------------------------------------------------------------------------
+void TVPResetTimerSystem();
 //---------------------------------------------------------------------------
 #endif

@@ -19,7 +19,6 @@
 //---------------------------------------------------------------------------
 // implementation in this unit
 //---------------------------------------------------------------------------
-extern ttstr TVPStartupScriptName;
 extern bool TVPStartupSuccess;
 
 extern void TVPInitScriptEngine();
@@ -155,7 +154,6 @@ extern bool TVPCheckProcessLog();
     }
 //---------------------------------------------------------------------------
 
-extern tTJS* TVPScriptEngine;
 void TVPCompileStorage(const ttstr& name,
                        bool isrequestresult,
                        bool outputdebug,

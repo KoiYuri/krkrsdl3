@@ -6,7 +6,6 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/AlphaMovie.cpp
     ${KRKRSDL_PLUGINS_PATH}/csvParser.cpp
     ${KRKRSDL_PLUGINS_PATH}/dirlist.cpp
-    ${KRKRSDL_PLUGINS_PATH}/DrawDeviceD3D.cpp
     ${KRKRSDL_PLUGINS_PATH}/expat.cpp
     ${KRKRSDL_PLUGINS_PATH}/fftgraph.cpp
     ${KRKRSDL_PLUGINS_PATH}/fstat.cpp
@@ -38,6 +37,7 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/wutcwf.cpp
     ${KRKRSDL_PLUGINS_PATH}/wuvorbis.cpp
     ${KRKRSDL_PLUGINS_PATH}/xp3filter.cpp
+    ${KRKRSDL_PLUGINS_PATH}/DrawDeviceD3D/DrawDeviceD3D.cpp
     ${KRKRSDL_PLUGINS_PATH}/emoteplayer/emotefile.cpp
     ${KRKRSDL_PLUGINS_PATH}/emoteplayer/emoteplayer.cpp
     ${KRKRSDL_PLUGINS_PATH}/emoteplayer/emoteplayerclass.cpp

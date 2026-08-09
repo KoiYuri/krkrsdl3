@@ -5,7 +5,7 @@
 #include "TVPWaveManager.h"
 #include "PlatformMutex.h"
 #include "PlatformAudio.h"
-#include <atomic>
+#include "WaveDecodeThread.h"
 
 /*[*/
 //---------------------------------------------------------------------------
@@ -160,14 +160,14 @@ public:
 // tTJSNI_WaveSoundBuffer : Wave Native Instance
 //---------------------------------------------------------------------------
 class tTVPWaveLoopManager;
-class tTJSNI_WaveSoundBuffer : public tTJSNI_BaseWaveSoundBuffer
+class tTJSNI_WaveSoundBuffer : public tTJSNI_BaseWaveSoundBuffer, iTVPDecodeSoundBuffer
 {
     typedef tTJSNI_BaseWaveSoundBuffer inherited;
 
 public:
     tTJSNI_WaveSoundBuffer();
-    tjs_error Construct(tjs_int numparams, tTJSVariant** param, iTJSDispatch2* tjs_obj);
-    void Invalidate();
+    tjs_error Construct(tjs_int numparams, tTJSVariant** param, iTJSDispatch2* tjs_obj) override;
+    void Invalidate() override;
 
     //-- buffer management ------------------------------------------------
 private:
@@ -194,7 +194,7 @@ private:
     tjs_uint8* Level2Buffer;
 
 public:
-    void FreeDirectSoundBuffer(bool disableevent = true)
+    void FreeDirectSoundBuffer(bool disableevent = true) override
     {
         // called at exit ( system uninitialization )
         bool b = CanDeliverEvents;
@@ -214,15 +214,8 @@ private:
 public:
     tTJSCriticalSection& GetBufferCS() { return BufferCS; }
 
-public:
-    std::atomic_bool DecodeActive{false};
-    std::atomic_bool DecodeInProgress{false};
-
 private:
     tTVPWaveDecoder* Decoder;
-
-public:
-    bool ThreadCallbackEnabled;
 
 private:
     bool BufferPlaying;   // whether this sound buffer is playing
@@ -257,7 +250,7 @@ private:
     tjs_uint Decode(void* buffer, tjs_uint bufsamplelen, tTVPWaveSegmentQueue& segments);
 
 public:
-    bool FillL2Buffer(bool firstwrite, bool fromdecodethread);
+    virtual bool FillL2Buffer(bool firstwrite, bool fromdecodethread) override;
 
 private:
     void PrepareToReadL2Buffer(bool firstread);
@@ -266,13 +259,13 @@ private:
     void FillDSBuffer(tjs_int writepos, tTVPWaveSegmentQueue& segments);
 
 public:
-    bool FillBuffer(bool firstwrite = false, bool allowpause = true);
+   bool FillBuffer(bool firstwrite = false, bool allowpause = true) override;
 
 private:
     void ResetLastCheckedDecodePos(uint32_t pp = (uint32_t)-1);
 
 public:
-    tjs_int FireLabelEventsAndGetNearestLabelEventStep(tjs_int64 tick);
+    tjs_int FireLabelEventsAndGetNearestLabelEventStep(tjs_int64 tick) override;
     tjs_int GetNearestEventStep();
     void FlushAllLabelEvents();
 
@@ -283,7 +276,7 @@ private:
 public:
     void Play();
     void Stop();
-    void SetBufferPaused(bool bPaused);
+    void SetBufferPaused(bool bPaused) override;
 
     bool GetPaused() const { return Paused; }
     void SetPaused(bool b);
@@ -292,7 +285,7 @@ public:
     tjs_int GetChannels() const { return InputFormat.Channels; }
 
 protected:
-    void TimerBeatHandler(); // override
+    void TimerBeatHandler() override;
 
 public:
     void Open(const ttstr& storagename);
@@ -323,11 +316,11 @@ private:
     tTVReal PosX, PosY, PosZ; // 3D position
 
 public:
-    void SetVolumeToSoundBuffer();
+    void SetVolumeToSoundBuffer() override;
 
 public:
-    void SetVolume(tjs_int v);
-    tjs_int GetVolume() const { return Volume; }
+    void SetVolume(tjs_int v) override;
+    tjs_int GetVolume() const override { return Volume; }
     void SetVolume2(tjs_int v);
     tjs_int GetVolume2() const { return Volume2; }
     void SetPan(tjs_int v);

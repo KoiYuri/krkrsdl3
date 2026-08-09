@@ -846,9 +846,6 @@ public:
                                            class tjsConstArrayData& constarray);
 
 protected:
-    void TJSVariantArrayStackAddRef();
-    void TJSVariantArrayStackRelease();
-
     class tTJSVariantArrayStack* TJSVariantArrayStack = nullptr;
 };
 //---------------------------------------------------------------------------

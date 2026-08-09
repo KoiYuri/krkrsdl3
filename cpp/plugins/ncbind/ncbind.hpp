@@ -30,6 +30,37 @@
 #define NCB_LOG_W(str) NCB_LOG_VOID
 #endif
 
+/*[*/
+//---------------------------------------------------------------------------
+// tTJSNativeClassForPlugin : service class for plugins
+//---------------------------------------------------------------------------
+typedef iTJSNativeInstance* (*tTJSCreateNativeInstance)();
+/*]*/
+//---------------------------------------------------------------------------
+// This class is for nasty workaround of inter-compiler compatibility
+class tTJSNativeClassForPlugin : public tTJSNativeClass
+{
+    tTJSCreateNativeInstance procCreateNativeInstance;
+
+public:
+    tTJSNativeClassForPlugin(const ttstr& name, tTJSCreateNativeInstance proc)
+      : procCreateNativeInstance(proc),
+        tTJSNativeClass(name)
+    {
+        ;
+    }
+
+protected:
+    iTJSNativeInstance* CreateNativeInstance() { return procCreateNativeInstance(); }
+};
+//---------------------------------------------------------------------------
+inline extern tTJSNativeClassForPlugin* TJSCreateNativeClassForPlugin(
+    const ttstr& name, tTJSCreateNativeInstance createinstance)
+{
+    return new tTJSNativeClassForPlugin(name, createinstance);
+}
+//---------------------------------------------------------------------------
+
 ////////////////////////////////////////
 // 共通型定義
 struct ncbTypedefs
@@ -3056,11 +3087,7 @@ struct ncbAutoRegister
         NCB_LOG_2(TJS_N("AllRegist:"), line);
 #endif
         for (ThisClassT const* p = _top[line]; p; p = p->_next)
-        {
-            ttstr name = p->modulename;
-            name.ToLowerCase();
-            _internal_plugins[name].lists[line].push_back(p); // p->Regist();
-        }
+            p->Regist();
     }
     static void AllUnregist(LineT line)
     {
@@ -3082,6 +3109,8 @@ struct ncbAutoRegister
             AllUnregist(static_cast<LineT>(line));
     }
     static bool LoadModule(const ttstr& _name);
+    static bool UnloadModule(const ttstr& _name);
+    static void ClearRegisteredModule();
 
 protected:
     virtual void Regist() const = 0;

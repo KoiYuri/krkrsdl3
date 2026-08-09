@@ -9,13 +9,14 @@
 void psbfile_init()
 {
     // 绑定psbfile类
-    iTJSDispatch2* global = TVPScriptEngine->GetGlobalNoAddRef();
+    iTJSDispatch2* global = TVPGetScriptDispatch();
     if (global)
     {
         iTJSDispatch2* dsp = TVPCreateNativeClass_PsbFile();
         tTJSVariant val = tTJSVariant(dsp);
         dsp->Release();
         global->PropSet(TJS_MEMBERENSURE, TJS_N("PSBFile"), NULL, &val, global);
+        global->Release();
     }
     // 注册media
     if (psbVar == nullptr)
@@ -28,10 +29,11 @@ void psbfile_init()
 void psbfile_done()
 {
     // 解绑psbfile类
-    iTJSDispatch2* global = TVPScriptEngine->GetGlobalNoAddRef();
+    iTJSDispatch2* global = TVPGetScriptDispatch();
     if (global)
     {
         global->DeleteMember(0, TJS_N("PSBFile"), NULL, global);
+        global->Release();
     }
     // 解注media
     if (psbVar != nullptr)

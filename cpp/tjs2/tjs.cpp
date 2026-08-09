@@ -91,7 +91,6 @@ public:
 tTJS::tTJS()
 {
     // tTJS constructor
-    RefCount = 1;
     ConsoleOutput = NULL;
     PPValues = NULL;
 
@@ -115,137 +114,96 @@ tTJS::tTJS()
     // create script cache object
     Cache = new tTJSScriptCache(this);
 
-    try
+    // push version value to pp value
+    PPValues = new tTJSPPMap();
+    PPValues->Values.Add(ttstr(TJS_N("version")), TJSVersionHex);
+
+    // create the GLOBAL object
+    Global = new tTJSCustomObject(TJS_GLOBAL_HASH_BITS);
+
+    if (TJSObjectHashMapEnabled())
+        TJSObjectHashSetType(Global, TJS_N("the global object"));
+
+    // register some default classes to the GLOBAL
+    iTJSDispatch2* dsp;
+    tTJSVariant val;
+
+    // Array
+    dsp = new tTJSArrayClass(); // TJSCreateArrayClass();
+    val = tTJSVariant(dsp, NULL);
+    dsp->Release();
+    Global->PropSet(TJS_MEMBERENSURE, TJS_N("Array"), NULL, &val, Global);
+
+    // Dictionary
+    dsp = new tTJSDictionaryClass();
+    val = tTJSVariant(dsp, NULL);
+    dsp->Release();
+    Global->PropSet(TJS_MEMBERENSURE, TJS_N("Dictionary"), NULL, &val, Global);
+
+    // Date
+    dsp = new tTJSNC_Date();
+    val = tTJSVariant(dsp, NULL);
+    dsp->Release();
+    Global->PropSet(TJS_MEMBERENSURE, TJS_N("Date"), NULL, &val, Global);
+
+    // Math
     {
+        iTJSDispatch2* math;
 
-        // push version value to pp value
-        PPValues = new tTJSPPMap();
-        PPValues->Values.Add(ttstr(TJS_N("version")), TJSVersionHex);
-
-        // create the GLOBAL object
-        Global = new tTJSCustomObject(TJS_GLOBAL_HASH_BITS);
-
-        if (TJSObjectHashMapEnabled())
-            TJSObjectHashSetType(Global, TJS_N("the global object"));
-
-        // register some default classes to the GLOBAL
-        iTJSDispatch2* dsp;
-        tTJSVariant val;
-
-        // Array
-        dsp = new tTJSArrayClass(); // TJSCreateArrayClass();
+        dsp = math = new tTJSNC_Math();
         val = tTJSVariant(dsp, NULL);
         dsp->Release();
-        Global->PropSet(TJS_MEMBERENSURE, TJS_N("Array"), NULL, &val, Global);
+        Global->PropSet(TJS_MEMBERENSURE, TJS_N("Math"), NULL, &val, Global);
 
-        // Dictionary
-        dsp = new tTJSDictionaryClass();
+        // Math.RandomGenerator
+        dsp = new tTJSNC_RandomGenerator();
         val = tTJSVariant(dsp, NULL);
         dsp->Release();
-        Global->PropSet(TJS_MEMBERENSURE, TJS_N("Dictionary"), NULL, &val, Global);
+        math->PropSet(TJS_MEMBERENSURE, TJS_N("RandomGenerator"), NULL, &val, math);
+    }
 
-        // Date
-        dsp = new tTJSNC_Date();
-        val = tTJSVariant(dsp, NULL);
-        dsp->Release();
-        Global->PropSet(TJS_MEMBERENSURE, TJS_N("Date"), NULL, &val, Global);
-
-        // Math
-        {
-            iTJSDispatch2* math;
-
-            dsp = math = new tTJSNC_Math();
-            val = tTJSVariant(dsp, NULL);
-            dsp->Release();
-            Global->PropSet(TJS_MEMBERENSURE, TJS_N("Math"), NULL, &val, Global);
-
-            // Math.RandomGenerator
-            dsp = new tTJSNC_RandomGenerator();
-            val = tTJSVariant(dsp, NULL);
-            dsp->Release();
-            math->PropSet(TJS_MEMBERENSURE, TJS_N("RandomGenerator"), NULL, &val, math);
-        }
-
-        // Exception
-        dsp = new tTJSNC_Exception();
-        val = tTJSVariant(dsp, NULL);
-        dsp->Release();
-        Global->PropSet(TJS_MEMBERENSURE, TJS_N("Exception"), NULL, &val, Global);
+    // Exception
+    dsp = new tTJSNC_Exception();
+    val = tTJSVariant(dsp, NULL);
+    dsp->Release();
+    Global->PropSet(TJS_MEMBERENSURE, TJS_N("Exception"), NULL, &val, Global);
 #ifndef TJS_NO_REGEXP
-        // RegExp
-        dsp = TJSCreateRegExpClass(); // the body is implemented in tjsRegExp.cpp
-        val = tTJSVariant(dsp, NULL);
-        dsp->Release();
-        Global->PropSet(TJS_MEMBERENSURE, TJS_N("RegExp"), NULL, &val, Global);
+    // RegExp
+    dsp = TJSCreateRegExpClass(); // the body is implemented in tjsRegExp.cpp
+    val = tTJSVariant(dsp, NULL);
+    dsp->Release();
+    Global->PropSet(TJS_MEMBERENSURE, TJS_N("RegExp"), NULL, &val, Global);
 #endif
-    }
-    catch (...)
-    {
-        Cleanup();
-
-        throw;
-    }
 }
 //---------------------------------------------------------------------------
 tTJS::~tTJS()
 {
-    // tTJS destructor
-    Cleanup();
-}
-//---------------------------------------------------------------------------
-void tTJS::Cleanup()
-{
-    TJSVariantArrayStackCompactNow();
-    //	TJSVariantArrayStackRelease();
-    delete VariantArrayStack;
-    VariantArrayStack = nullptr;
-
-    if (Global)
-        Global->Release(), Global = NULL;
+#ifndef TJS_NO_REGEXP
+    TJSReleaseRegex();
+#endif
 
     if (PPValues)
         delete PPValues;
     if (Cache)
         delete Cache;
 
-    TJSReservedWordsHashRelease();
-
-    TJSReleaseGlobalStringMap();
-
-    TJSReleaseRegex();
-
     if (TJSEnableDebugMode)
     {
         TJSReleaseStackTracer();
         TJSReleaseObjectHashMap();
     }
-}
-//---------------------------------------------------------------------------
-void tTJS::AddRef()
-{
-    RefCount++;
-}
-//---------------------------------------------------------------------------
-void tTJS::Release()
-{
-    if (RefCount == 1)
-    {
-        delete this;
-    }
-    else
-    {
-        RefCount--;
-    }
-}
-//---------------------------------------------------------------------------
-void tTJS::Shutdown()
-{
-    TJSVariantArrayStackCompactNow();
-    Global->Clear();
-    if (Global)
-        Global->Release(), Global = NULL;
-    if (Cache)
-        delete Cache, Cache = NULL;
+
+    TJSReleaseGlobalStringMap();
+
+    TJSReservedWordsHashRelease();
+
+    delete VariantArrayStack;
+    VariantArrayStack = nullptr;
+
+    // 清除所有难以自动释放的堆内存
+    TJSClearScriptBlockHeap();
+    TJSClearObjectHeap();
+    TJSClearRegisterHeap();
 }
 //---------------------------------------------------------------------------
 iTJSDispatch2* tTJS::GetGlobal()

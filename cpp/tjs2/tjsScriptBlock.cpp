@@ -17,6 +17,20 @@
 
 namespace TJS
 {
+static bool _tjsForceShutdown = false;
+static tTJSObjectPool<tTJSScriptBlock> _allTJSScriptBlock;
+void TJSCompactScriptBlockHeap()
+{
+    // TODO
+}
+void TJSClearScriptBlockHeap()
+{
+    _tjsForceShutdown = true;
+    _allTJSScriptBlock.forEach([](tTJSScriptBlock* obj) { delete obj; });
+    _allTJSScriptBlock.clear();
+    _tjsForceShutdown = false;
+}
+
 //---------------------------------------------------------------------------
 int yyparse(void*);
 //---------------------------------------------------------------------------
@@ -26,7 +40,6 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner)
 {
     RefCount = 1;
     Owner = owner;
-    Owner->AddRef();
 
     Script = NULL;
     Name = NULL;
@@ -40,6 +53,7 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner)
     LineOffset = 0;
 
     Owner->AddScriptBlock(this);
+    _allTJSScriptBlock.registerObject(this);
 }
 //---------------------------------------------------------------------------
 // for Bytecode
@@ -47,7 +61,6 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner, const tjs_char* name, tjs_int line
 {
     RefCount = 1;
     Owner = owner;
-    Owner->AddRef();
     Name = NULL;
     if (name)
     {
@@ -64,6 +77,7 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner, const tjs_char* name, tjs_int line
     UsingPreProcessor = false;
 
     Owner->AddScriptBlock(this);
+    _allTJSScriptBlock.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSScriptBlock::~tTJSScriptBlock()
@@ -86,7 +100,10 @@ tTJSScriptBlock::~tTJSScriptBlock()
     if (Name)
         delete[] Name;
 
-    Owner->Release();
+    if (!_tjsForceShutdown)
+    {
+        _allTJSScriptBlock.unregisterObject(this);
+    }
 }
 //---------------------------------------------------------------------------
 void tTJSScriptBlock::AddRef(void)

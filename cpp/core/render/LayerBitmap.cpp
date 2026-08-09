@@ -1716,8 +1716,6 @@ void TVPInializeFontRasterizers()
     if (TVPFontRasterizersInit == false)
     {
         TVPFontRasterizers[FONT_RASTER_FREE_TYPE] = new FreeTypeFontRasterizer();
-        //		TVPFontRasterizers[FONT_RASTER_GDI] = new GDIFontRasterizer();
-
         TVPCreateDefaultFont();
         TVPFontRasterizersInit = true;
     }
@@ -1734,6 +1732,7 @@ void TVPUninitializeFontRasterizers()
     }
 
     TVPUninitializeFreeFont();
+    TVPFontRasterizersInit = false;
 }
 static tTVPAtExit TVPUninitializeFontRaster(TVP_ATEXIT_PRI_RELEASE, TVPUninitializeFontRasterizers);
 

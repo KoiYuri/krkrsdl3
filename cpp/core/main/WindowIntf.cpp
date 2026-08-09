@@ -40,6 +40,13 @@ static void TVPRegisterWindowToList(tTJSNI_Window* window)
     {
         // first time the window is registered
         TVPMainWindow = window; // set as main window
+        TJSAddStaticToRegisterHeap(
+            [](void*)
+            {
+                TVPMainWindow = NULL;
+                TVPWindowVector.clear();
+            },
+            NULL);
     }
     TVPWindowVector.push_back(window);
 

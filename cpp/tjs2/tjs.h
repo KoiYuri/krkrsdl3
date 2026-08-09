@@ -77,23 +77,9 @@ class tTJSScriptCache;
 class tTJS
 {
     friend class tTJSScriptBlock;
-
-private:
-    tjs_uint RefCount; // reference count
-
 public:
     tTJS();
-
-protected:
-    virtual ~tTJS();
-
-public:
-    void Cleanup();
-
-    void AddRef();
-    void Release();
-
-    void Shutdown();
+    ~tTJS();
 
 private:
     tTJSPPMap* PPValues;
@@ -277,4 +263,62 @@ public:
     tjs_uint8 ReadI8LE();
 };
 //---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+// tTJSObjectPool
+//---------------------------------------------------------------------------
+template<typename T>
+class tTJSObjectPool
+{
+    std::vector<T*> m_entries;
+    std::vector<size_t> m_freeSlots;
+
+public:
+    void registerObject(T* obj)
+    {
+        if (!obj)
+            return;
+
+        if (m_freeSlots.empty())
+            m_entries.push_back(obj);
+        else
+        {
+            size_t index = m_freeSlots.back();
+            m_freeSlots.pop_back();
+            m_entries[index] = obj;
+        }
+    }
+
+    void unregisterObject(T* obj)
+    {
+        if (!obj)
+            return;
+
+        for (size_t i = 0; i < m_entries.size(); ++i)
+        {
+            if (m_entries[i] == obj)
+            {
+                m_entries[i] = nullptr;
+                m_freeSlots.push_back(i);
+                break;
+            }
+        }
+    }
+
+    void clear()
+    {
+        m_entries.clear();
+        m_freeSlots.clear();
+    }
+
+    template<typename Func>
+    void forEach(Func func)
+    {
+        for (T* obj : m_entries)
+        {
+            if (obj)
+                func(obj);
+        }
+    }
+};
 }; // namespace TJS

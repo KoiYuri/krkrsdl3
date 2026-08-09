@@ -20,17 +20,19 @@
 #include "GraphicsLoadThread.h"
 #include "Platform.h"
 #include "PlatformView.h"
+#include "RenderManager.h"
+#include "MainWindowLayer.h"
 #include "TVPEvent.h"
+#include "TVPCompositor.h"
 
 #include "TVPStorage.h"
 #include "TVPColor.h"
 #include "TVPFont.h"
 #include "TVPTimer.h"
 
-tTVPApplication* Application = new tTVPApplication;
+tTVPApplication* Application = NULL;
 static tTJSCriticalSection _NoMemCallBackCS;
 static void* _reservedMem = malloc(1024 * 1024 * 4); // 4M reserved mem
-static bool _project_startup = false;
 
 ttstr TVPGetErrorDialogTitle()
 {
@@ -72,9 +74,7 @@ void TVPCheckMemory()
 }
 
 tTVPApplication::tTVPApplication()
-  : is_attach_console_(false),
-    tarminate_(false),
-    application_activating_(true),
+  : tarminate_(false),
     image_load_thread_(NULL),
     has_map_report_process_(false)
 {
@@ -86,11 +86,15 @@ tTVPApplication::~tTVPApplication()
 
 bool tTVPApplication::StartApplication()
 {
+    TVPTerminated = false;
+    TVPTerminateOnWindowClose = true;
+    TVPTerminateOnNoWindowStartup = true;
     TVPTerminateCode = 0;
 
     // try starting the program!
     try
     {
+        TVPResetTimerSystem();
         TVPInitScriptEngine();
         TVPInitFontNames();
 
@@ -113,7 +117,6 @@ bool tTVPApplication::StartApplication()
         image_load_thread_->Resume();
 
         TVPInitializeStartupScript();
-        _project_startup = true;
     }
     catch (const EAbort&)
     {
@@ -123,21 +126,12 @@ bool tTVPApplication::StartApplication()
     return true;
 }
 
-void tTVPApplication::ShowException(const ttstr& e)
-{
-    TVPShowSimpleMessageBox(e, TVPGetErrorDialogTitle());
-    TVPSystemUninit();
-    TVPExitApplication(0);
-}
-void tTVPApplication::Run()
+bool tTVPApplication::Run()
 {
     try
     {
         if (TVPTerminated)
-        {
-            TVPSystemUninit();
-            TVPExitApplication(TVPTerminateCode);
-        }
+            return false;
         ProcessMessages();
         if (TVPSystemControl)
             TVPSystemControl->SystemWatchTimerTimer();
@@ -146,6 +140,8 @@ void tTVPApplication::Run()
     {
         // nothing to do
     }
+    iTVPTexture2D::RecycleProcess();
+    return true;
 }
 
 void tTVPApplication::ProcessMessages()
@@ -181,65 +177,23 @@ void tTVPApplication::FilterUserMessage(
     func(m_lstUserMsg);
 }
 
-void tTVPApplication::OnActivate()
-{
-    application_activating_ = true;
-    if (!_project_startup)
-        return;
-
-    //	TVPRestoreFullScreenWindowAtActivation();
-    TVPResetVolumeToAllSoundBuffer();
-    TVPUnlockSoundMixer();
-
-    // trigger System.onActivate event
-    TVPPostApplicationActivateEvent();
-    for (auto& it : m_activeEvents)
-    {
-        it.second(it.first, eTVPActiveEvent::onActive);
-    }
-}
-void tTVPApplication::OnDeactivate()
-{
-    application_activating_ = false;
-    if (!_project_startup)
-        return;
-
-    //	TVPMinimizeFullScreenWindowAtInactivation();
-
-    // fire compact event
-    TVPDeliverCompactEvent(TVP_COMPACT_LEVEL_DEACTIVATE);
-
-    // set sound volume
-    TVPResetVolumeToAllSoundBuffer();
-    TVPLockSoundMixer();
-
-    // trigger System.onDeactivate event
-    TVPPostApplicationDeactivateEvent();
-    for (auto& it : m_activeEvents)
-    {
-        it.second(it.first, eTVPActiveEvent::onDeactive);
-    }
-}
-
 void tTVPApplication::OnExit()
 {
-    TVPUninitScriptEngine();
+    TVPSystemUninit();
+    TVPUnloadPlugins();
+
+    delete image_load_thread_;
+    image_load_thread_ = NULL;
+    TVPDeliverCompactEvent(TVP_COMPACT_LEVEL_MAX);
 
     if (TVPSystemControl)
         delete TVPSystemControl;
     TVPSystemControl = NULL;
-}
-
-void tTVPApplication::OnLowMemory()
-{
-    if (!_project_startup)
-        return;
-    TVPDeliverCompactEvent(TVP_COMPACT_LEVEL_MAX);
-}
-
-bool tTVPApplication::GetNotMinimizing() const
-{
-    return !application_activating_;
+    TVPUninitScriptEngine();
+    TVPClearAllAutoPath();
+    TVPClearAllWindows();
+    krkrsdl3::TVPClearAllTexture();
+    iTVPTexture2D::RecycleProcess();
 }
 
 void tTVPApplication::LoadImageRequest(class iTJSDispatch2* owner,

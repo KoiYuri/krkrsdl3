@@ -45,6 +45,7 @@ public class KRKRActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SDLActivity.nativeSetenv("SDL_ANDROID_ALLOW_RECREATE_ACTIVITY", "1");
         super.onCreate(savedInstanceState);
         setNativeAssetManager(getAssets());
         Intent intent = getIntent();

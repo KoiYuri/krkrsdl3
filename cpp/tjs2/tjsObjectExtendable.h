@@ -97,5 +97,6 @@ public:
     // スーパークラスの登録と取得をサポート
     tjs_error ClassInstanceInfo(tjs_uint32 flag, tjs_uint num, tTJSVariant* value);
 };
+//---------------------------------------------------------------------------
 } // namespace TJS
 #endif // tjsObjectExtendableH

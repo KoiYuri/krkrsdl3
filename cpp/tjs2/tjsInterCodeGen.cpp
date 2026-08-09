@@ -425,6 +425,19 @@ tTJSInterCodeContext::~tTJSInterCodeContext()
     if (Name)
         delete[] Name;
     Name = NULL;
+
+    //if (_DataArea)
+    //{
+    //    for (tjs_int i = 0; i < _DataAreaSize; i++)
+    //        delete _DataArea[i];
+    //    TJS_free(_DataArea);
+    //    _DataArea = NULL;
+    //}
+    //if (DataArea)
+    //{
+    //    delete[] DataArea;
+    //    DataArea = NULL;
+    //}
 }
 //---------------------------------------------------------------------------
 void tTJSInterCodeContext::Finalize(void)

@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     {
         tTJSVariant result;
         TVPScriptEngine->ExecScript(script_text, &result);
-        TVPScriptEngine->Release();
+        delete TVPScriptEngine;
     }
     catch (const TJS::eTJSScriptError& e)
     {

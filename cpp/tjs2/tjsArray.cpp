@@ -1918,21 +1918,21 @@ tjs_int32 TJSGetArrayClassID()
 //---------------------------------------------------------------------------
 // TJSCreateArrayObject
 //---------------------------------------------------------------------------
+static tTJSNativeClass* _arrayclass = NULL;
 iTJSDispatch2* TJSCreateArrayObject(iTJSDispatch2** classout)
 {
-    // create an Array object
-    struct tHolder
+    if (!_arrayclass)
     {
-        iTJSDispatch2* Obj;
-        tHolder() { Obj = new tTJSArrayClass(); }
-        ~tHolder() { Obj->Release(); }
-    } static arrayclass;
+        // create an Array object
+        _arrayclass = new tTJSArrayClass();
+        TJS_REGISTER_STATIC_HEAP(_arrayclass);
+    }
 
     if (classout)
-        *classout = arrayclass.Obj, arrayclass.Obj->AddRef();
+        *classout = _arrayclass, _arrayclass->AddRef();
 
     tTJSArrayObject* arrayobj;
-    (arrayclass.Obj)->CreateNew(0, NULL, NULL, (iTJSDispatch2**)&arrayobj, 0, NULL, arrayclass.Obj);
+    (_arrayclass)->CreateNew(0, NULL, NULL, (iTJSDispatch2**)&arrayobj, 0, NULL, _arrayclass);
     return arrayobj;
 }
 //---------------------------------------------------------------------------

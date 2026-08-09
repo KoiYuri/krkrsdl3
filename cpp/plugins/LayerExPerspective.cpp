@@ -128,33 +128,6 @@ static void delMethod(iTJSDispatch2* dispatch, const tjs_char* methodName)
 //---------------------------------------------------------------------------
 void InitPlugin_Perspective()
 {
-    // 	if (TVPGetRenderManager()->IsSoftware()) {
-    // 	    TVPAddImportantLog(ttstr(copyright));
-    //
-    // 	    // クラスオブジェクトチェック
-    // 	    if ((NI_LayerExBase::classId = TJSFindNativeClassID(TJS_N("LayerExBase"))) <= 0) {
-    // 		    NI_LayerExBase::classId = TJSRegisterNativeClass(TJS_N("LayerExBase"));
-    // 	    }
-    //
-    // 	    {
-    // 		    // TJS のグローバルオブジェクトを取得する
-    // 		    iTJSDispatch2 * global = TVPGetScriptDispatch();
-    //
-    // 		    // Layer クラスオブジェクトを取得
-    // 		    tTJSVariant varScripts;
-    // 		    TVPExecuteExpression(TJS_N("Layer"), &varScripts);
-    // 		    iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
-    // 		    if (dispatch) {
-    // 			    // プロパティ初期化
-    // 			    NI_LayerExBase::init(dispatch);
-    //
-    // 			    // 専用メソッドの追加
-    // 			    addMethod(dispatch, TJS_N("perspectiveCopy"), new tPerspectiveCopy());
-    // 		    }
-    //
-    // 		    global->Release();
-    // 	    }
-    //     } else {
     iTJSDispatch2* global = TVPGetScriptDispatch();
     tTJSVariant varScripts;
     global->PropGet(0, TJS_N("Layer"), nullptr, &varScripts, global);
@@ -164,7 +137,7 @@ void InitPlugin_Perspective()
         addMethod(dispatch, TJS_N("perspectiveCopy"),
                   TJSCreateNativeClassMethod(PerspectiveCopy_GL));
     }
-    //}
+    global->Release();
 }
 
 NCB_PRE_REGIST_CALLBACK(InitPlugin_Perspective);

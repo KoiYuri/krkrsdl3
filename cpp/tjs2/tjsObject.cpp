@@ -19,6 +19,22 @@
 
 namespace TJS
 {
+//---------------------------------------------------------------------------
+// simple object heap manager
+//---------------------------------------------------------------------------
+static bool _tjsForceShutdown = false;
+static tTJSObjectPool<tTJSCustomObject> _allTJSObjects;
+void TJSCompactObjectHeap()
+{
+    // TODO
+}
+void TJSClearObjectHeap()
+{
+    _tjsForceShutdown = true;
+    _allTJSObjects.forEach([](tTJSCustomObject* obj) { delete obj; });
+    _allTJSObjects.clear();
+    _tjsForceShutdown = false;
+}
 
 //---------------------------------------------------------------------------
 // utility functions
@@ -372,21 +388,61 @@ tTJSCustomObject::tTJSCustomObject(tjs_int hashbits)
     missing_name = MissingName;
     for (tjs_int i = 0; i < TJS_MAX_NATIVE_CLASS; i++)
         ClassIDs[i] = (tjs_int32)-1;
+    _allTJSObjects.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSCustomObject::~tTJSCustomObject()
 {
-    for (tjs_int i = TJS_MAX_NATIVE_CLASS - 1; i >= 0; i--)
+    if (!_tjsForceShutdown) // TODO instance管理以后再说
     {
-        if (ClassIDs[i] != -1)
+        for (tjs_int i = TJS_MAX_NATIVE_CLASS - 1; i >= 0; i--)
         {
-            if (ClassInstances[i])
-                ClassInstances[i]->Destruct();
+            if (ClassIDs[i] != -1)
+            {
+                if (ClassInstances[i])
+                    ClassInstances[i]->Destruct();
+            }
+        }
+
+        delete[] Symbols;
+    }
+    else
+    {
+        for (tjs_int i = 0; i < TJS_MAX_NATIVE_CLASS; i++)
+        {
+            if (ClassIDs[i] != -1 && ClassInstances[i])
+            {
+                delete ClassInstances[i];
+                ClassInstances[i] = nullptr;
+                ClassIDs[i] = -1;
+            }
+        }
+        if (Symbols)
+        {
+            tTJSSymbolData* lv1 = Symbols;
+            tTJSSymbolData* lv1lim = lv1 + HashSize;
+            for (; lv1 < lv1lim; lv1++)
+            {
+                tTJSSymbolData* d = lv1->Next;
+                while (d)
+                {
+                    tTJSSymbolData* nextd = d->Next;
+                    delete d;
+                    d = nextd;
+                }
+            }
+            delete[] Symbols;
+            Symbols = nullptr;
         }
     }
-    delete[] Symbols;
+
     if (TJSObjectHashMapEnabled())
         TJSRemoveObjectHashRecord(this);
+
+    if (!_tjsForceShutdown)
+    {
+        _allTJSObjects.unregisterObject(this);
+    }
 }
 //---------------------------------------------------------------------------
 void tTJSCustomObject::_Finalize(void)
@@ -2181,15 +2237,4 @@ tjs_error tTJSCustomObject::ClassInstanceInfo(tjs_uint32 flag, tjs_uint num, tTJ
     return TJS_E_NOTIMPL;
 }
 //---------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------
-// TJSCreateCustomObject
-//---------------------------------------------------------------------------
-iTJSDispatch2* TJSCreateCustomObject()
-{
-    // utility function; returns newly created empty tTJSCustomObject
-    return new tTJSCustomObject();
-}
-//---------------------------------------------------------------------------
-
 } // namespace TJS

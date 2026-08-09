@@ -21,6 +21,12 @@
 namespace TJS
 {
 //---------------------------------------------------------------------------
+// simple ScriptBlock heap manager
+//---------------------------------------------------------------------------
+extern void TJSCompactScriptBlockHeap();
+extern void TJSClearScriptBlockHeap();
+
+//---------------------------------------------------------------------------
 // tTJSScriptBlock - a class for managing the script block
 //---------------------------------------------------------------------------
 class tTJS;

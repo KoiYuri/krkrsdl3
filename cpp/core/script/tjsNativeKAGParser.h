@@ -334,6 +334,23 @@ public:
     bool GetMultiLineTagEnabled() const { return MultiLineTagEnabled; }
 };
 
+//---------------------------------------------------------------------------
+// tTJSNC_KAGParser
+//---------------------------------------------------------------------------
+class tTJSNC_KAGParser : public tTJSNativeClass
+{
+    typedef tTJSNativeClass inherited;
+
+public:
+    tTJSNC_KAGParser();
+
+    static tjs_uint32 ClassID;
+
+protected:
+    tTJSNativeInstance* CreateNativeInstance();
+};
+//---------------------------------------------------------------------------
 extern iTJSDispatch2* TVPCreateNativeClass_KAGParser();
+//---------------------------------------------------------------------------
 
 #endif

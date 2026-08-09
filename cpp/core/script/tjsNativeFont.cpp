@@ -721,51 +721,30 @@ TJS_END_NATIVE_MEMBERS
 //---------------------------------------------------------------------------
 // TVPCreateNativeClass_Font
 //---------------------------------------------------------------------------
-struct tFontClassHolder
-{
-    tTJSNativeClass* Obj;
-    tFontClassHolder() : Obj(NULL) {}
-    void Set(tTJSNativeClass* obj)
-    {
-        if (Obj)
-        {
-            Obj->Release();
-            Obj = NULL;
-        }
-        Obj = obj;
-        Obj->AddRef();
-    }
-    ~tFontClassHolder()
-    {
-        if (Obj)
-            Obj->Release(), Obj = NULL;
-    }
-} static fontclassholder;
-//---------------------------------------------------------------------------
+static tTJSNativeClass* _fontclass = NULL;
 tTJSNativeClass* TVPCreateNativeClass_Font()
 {
-    if (fontclassholder.Obj)
+    if (_fontclass)
     {
-        tTJSNativeClass* fontclass = fontclassholder.Obj;
-        fontclass->AddRef();
-        return fontclass;
+        _fontclass->AddRef();
+        return _fontclass;
     }
-    tTJSNativeClass* fontclass = new tTJSNC_Font();
-    fontclassholder.Set(fontclass);
-    return fontclass;
+    _fontclass = new tTJSNC_Font();
+    _fontclass->AddRef();
+    TJS_REGISTER_STATIC_HEAP(_fontclass);
+    return _fontclass;
 }
 //---------------------------------------------------------------------------
 iTJSDispatch2* TVPCreateFontObject(iTJSDispatch2* layer)
 {
-    if (fontclassholder.Obj == NULL)
+    if (!_fontclass)
     {
         TVPThrowInternalError;
     }
     iTJSDispatch2* out;
     tTJSVariant param(layer);
     tTJSVariant* pparam = &param;
-    if (TJS_FAILED(
-            fontclassholder.Obj->CreateNew(0, NULL, NULL, &out, 1, &pparam, fontclassholder.Obj)))
+    if (TJS_FAILED(_fontclass->CreateNew(0, NULL, NULL, &out, 1, &pparam, _fontclass)))
         TVPThrowInternalError;
 
     return out;

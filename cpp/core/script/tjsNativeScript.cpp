@@ -117,10 +117,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ exec)
     iTJSDispatch2* context =
         numparams >= 4 && param[3]->Type() != tvtVoid ? param[3]->AsObjectNoAddRef() : NULL;
 
-    if (TVPScriptEngine)
-        TVPScriptEngine->ExecScript(content, result, context, &name, lineofs);
-    else
-        TVPThrowInternalError;
+    TVPExecuteScript(content, name, lineofs, context, result);
 
     return TJS_S_OK;
 }
@@ -144,10 +141,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ eval)
     iTJSDispatch2* context =
         numparams >= 4 && param[3]->Type() != tvtVoid ? param[3]->AsObjectNoAddRef() : NULL;
 
-    if (TVPScriptEngine)
-        TVPScriptEngine->EvalExpression(content, result, context, &name, lineofs);
-    else
-        TVPThrowInternalError;
+    TVPExecuteExpression(content, name, lineofs, context, result);
 
     return TJS_S_OK;
 }

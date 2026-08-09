@@ -162,6 +162,9 @@ void TVPAddAutoPath(const ttstr& name);
 
 void TVPRemoveAutoPath(const ttstr& name);
 // remove given path from auto search path
+
+void TVPClearAllAutoPath();
+// remove all given path from auto search path
 //---------------------------------------------------------------------------
 
 ttstr TVPGetPlacedPath(const ttstr& name);

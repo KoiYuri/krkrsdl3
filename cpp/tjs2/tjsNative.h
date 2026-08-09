@@ -16,6 +16,19 @@
 namespace TJS
 {
 //---------------------------------------------------------------------------
+// simple register heap manager
+//---------------------------------------------------------------------------
+extern void TJSCompactRegisterHeap();
+extern void TJSClearRegisterHeap();
+typedef void(_TJSStaticClearFun)(void* ptr);
+extern void TJSAddStaticToRegisterHeap(_TJSStaticClearFun*, void*);
+#define TJS_REGISTER_STATIC_HEAP(clsVar) \
+    TJSAddStaticToRegisterHeap([](void* addr) { \
+        tTJSNativeClass** cls = (tTJSNativeClass**)addr; \
+        *cls = NULL;\
+    }, &clsVar);
+
+//---------------------------------------------------------------------------
 extern tjs_int32 TJSRegisterNativeClass(const tjs_char* name);
 extern tjs_int32 TJSFindNativeClassID(const tjs_char* name);
 extern const tjs_char* TJSFindNativeClassName(tjs_int32 id);
@@ -61,15 +74,7 @@ typedef tjs_error (*tTJSNativeClassMethodCallback)(tTJSVariant* result,
                                                    tTJSVariant** param,
                                                    iTJSDispatch2* objthis);
 /*]*/
-#ifdef __TP_STUB_H__
-/*[*/
-class tTJSNativeClassMethod : public iTJSDispatch2
-{
-};
-/*]*/
-#else
 class tTJSNativeClassMethod;
-#endif
 /*[*/
 
 /*]*/
@@ -137,15 +142,7 @@ typedef tjs_error (*tTJSNativeClassPropertyGetCallback)(tTJSVariant* result,
 typedef tjs_error (*tTJSNativeClassPropertySetCallback)(const tTJSVariant* param,
                                                         iTJSDispatch2* objthis);
 /*]*/
-#ifdef __TP_STUB_H__
-/*[*/
-class tTJSNativeClassProperty : public iTJSDispatch2
-{
-};
-/*]*/
-#else
 class tTJSNativeClassProperty;
-#endif
 /*[*/
 
 /*]*/
@@ -256,65 +253,12 @@ inline extern void TJSNativeClassSetClassID(tTJSNativeClass* cls, tjs_int32 clas
 
 /*[*/
 //---------------------------------------------------------------------------
-// tTJSNativeClassForPlugin : service class for plugins
-//---------------------------------------------------------------------------
-typedef iTJSNativeInstance* (*tTJSCreateNativeInstance)();
-/*]*/
-#ifdef __TP_STUB_H__
-/*[*/
-class tTJSNativeClass : public iTJSDispatch2
-{
-};
-class tTJSNativeClassForPlugin : public tTJSNativeClass
-{
-};
-/*]*/
-#else
-class tTJSNativeClassForPlugin;
-#endif
-/*[*/
-
-/*]*/
-//---------------------------------------------------------------------------
-// This class is for nasty workaround of inter-compiler compatibility
-class tTJSNativeClassForPlugin : public tTJSNativeClass
-{
-    tTJSCreateNativeInstance procCreateNativeInstance;
-
-public:
-    tTJSNativeClassForPlugin(const ttstr& name, tTJSCreateNativeInstance proc)
-      : procCreateNativeInstance(proc),
-        tTJSNativeClass(name)
-    {
-        ;
-    }
-
-protected:
-    iTJSNativeInstance* CreateNativeInstance() { return procCreateNativeInstance(); }
-};
-//---------------------------------------------------------------------------
-inline extern tTJSNativeClassForPlugin* TJSCreateNativeClassForPlugin(
-    const ttstr& name, tTJSCreateNativeInstance createinstance)
-{
-    return new tTJSNativeClassForPlugin(name, createinstance);
-}
-//---------------------------------------------------------------------------
-
-/*[*/
-//---------------------------------------------------------------------------
 // following macros are to be written in the constructor of child class
 // to define native methods/properties.
 /*]*/
-#ifdef __TP_STUB_H__
-/*[*/
-#define TJS_NCM_REG_THIS classobj
-#define TJS_NATIVE_SET_ClassID TJS_NATIVE_CLASSID_NAME = TJS_NCM_CLASSID;
-/*]*/
-#else
 #define TJS_NCM_REG_THIS this
 #define TJS_NATIVE_SET_ClassID ClassID = TJS_NCM_CLASSID;
 #define TJS_NATIVE_CLASSID_NAME TJS_NCM_CLASSID
-#endif
 /*[*/
 
 #define TJS_GET_NATIVE_INSTANCE(varname, typename) \
@@ -494,42 +438,6 @@ inline extern tTJSNativeClassForPlugin* TJSCreateNativeClassForPlugin(
 #define TJS_PARAM_EXIST(num) (numparams > (num) ? param[num]->Type() != tvtVoid : false)
 
 /*]*/
-
-//---------------------------------------------------------------------------
-// tTJSNativeFunction
-//---------------------------------------------------------------------------
-// base class used for native function ( for non-class-method )
-class tTJSNativeFunction : public tTJSDispatch
-{
-    typedef tTJSDispatch inherited;
-
-public:
-    tTJSNativeFunction(const tjs_char* name = NULL);
-    // 'name' is just to be used as a label for debugging
-    ~tTJSNativeFunction();
-
-    tjs_error FuncCall(tjs_uint32 flag,
-                       const tjs_char* membername,
-                       tjs_uint32* hint,
-                       tTJSVariant* result,
-                       tjs_int numparams,
-                       tTJSVariant** param,
-                       iTJSDispatch2* objthis);
-
-    tjs_error IsInstanceOf(tjs_uint32 flag,
-                           const tjs_char* membername,
-                           tjs_uint32* hint,
-                           const tjs_char* classname,
-                           iTJSDispatch2* objthis);
-
-protected:
-    tjs_error virtual Process(tTJSVariant* result,
-                              tjs_int numparams,
-                              tTJSVariant** param,
-                              iTJSDispatch2* objthis) = 0;
-    // override this instead of FuncCall
-};
-//---------------------------------------------------------------------------
 } // namespace TJS
 
 #endif

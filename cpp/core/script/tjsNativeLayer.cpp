@@ -8313,6 +8313,9 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ loadImages)
     tjs_uint32 key = clNone;
     if (numparams >= 2 && param[1]->Type() != tvtVoid)
         key = (tjs_uint32)param[1]->AsInteger();
+
+    //TVPConsoleLog("KrkrLoadPic--->%s", name.c_str());
+
     iTJSDispatch2* metainfo = _this->LoadImages(name, key);
     try
     {

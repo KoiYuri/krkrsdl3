@@ -797,20 +797,6 @@ static void TVPClearAutoPathCache()
     AutoPathTableInit = false;
 }
 //---------------------------------------------------------------------------
-struct tTVPClearAutoPathCacheCallback : public tTVPCompactEventCallbackIntf
-{
-    virtual void OnCompact(tjs_int level)
-    {
-        if (level >= TVP_COMPACT_LEVEL_DEACTIVATE)
-        {
-            // clear the auto search path cache on application deactivate
-            tTJSCriticalSectionHolder cs_holder(TVPCreateStreamCS);
-            TVPClearAutoPathCache();
-        }
-    }
-} static TVPClearAutoPathCacheCallback;
-static bool TVPClearAutoPathCacheCallbackInit = false;
-//---------------------------------------------------------------------------
 void TVPAddAutoPath(const ttstr& name)
 {
     tTJSCriticalSectionHolder cs_holder(TVPCreateStreamCS);
@@ -844,6 +830,12 @@ void TVPRemoveAutoPath(const ttstr& name)
     if (i != TVPAutoPathList.end())
         TVPAutoPathList.erase(i);
 
+    TVPClearAutoPathCache();
+}
+//---------------------------------------------------------------------------
+void TVPClearAllAutoPath()
+{
+    TVPAutoPathList.clear();
     TVPClearAutoPathCache();
 }
 //---------------------------------------------------------------------------

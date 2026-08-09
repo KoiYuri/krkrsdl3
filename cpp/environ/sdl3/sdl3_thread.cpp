@@ -36,22 +36,22 @@ tTVPThread::tTVPThread(const char* name)
     Suspended = true;
 
     _impl = new TVPThreadImpl;
+    THR_IMPL->mutex = SDL_CreateMutex();
+    THR_IMPL->cond = SDL_CreateCondition();
     THR_IMPL->thread = SDL_CreateThread(StartProc, name, this);
     if (!THR_IMPL->thread)
     {
         TVPThrowInternalError;
     }
-    THR_IMPL->mutex = SDL_CreateMutex();
-    THR_IMPL->cond = SDL_CreateCondition();
 }
 //---------------------------------------------------------------------------
 tTVPThread::~tTVPThread()
 {
     if (!Terminated)
         Terminate();
+    delete THR_IMPL;
     SDL_DestroyCondition(THR_IMPL->cond);
     SDL_DestroyMutex(THR_IMPL->mutex);
-    delete THR_IMPL;
     _impl = NULL;
 }
 //---------------------------------------------------------------------------
