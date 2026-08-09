@@ -76,8 +76,8 @@ set(KRKRSDL_PLUGINS_SRC
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zBuf.c
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zBuf2.c
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/7zStream.c
-    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/AES.c
-    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/AESOpt.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Aes.c
+    ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/AesOpt.c
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Alloc.c
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bcj2.c
     ${KRKRSDL_PLUGINS_PATH}/Kirikiroid2/7zip/Bcj2Enc.c

@@ -207,21 +207,7 @@ SeparateLayerAdaptor::SeparateLayerAdaptor(iTJSDispatch2* targetLayer)
 }
 SeparateLayerAdaptor::~SeparateLayerAdaptor()
 {
-    if (TVPSettings.renderer == "opengl")
-    {
-        if (fbotexture != 0 && glIsTexture(fbotexture) == GL_TRUE)
-            glDeleteTextures(1, &fbotexture);
-        if (fbodepthtexture != 0 && glIsTexture(fbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &fbodepthtexture);
-        if (superfbotexture != 0 && glIsTexture(superfbotexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbotexture);
-        if (superfbodepthtexture != 0 && glIsTexture(superfbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbodepthtexture);
-        if (fbo != 0 || glIsFramebuffer(fbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &fbo);
-        if (superfbo != 0 || glIsFramebuffer(superfbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &superfbo);
-    }
+    clear();
 }
 void SeparateLayerAdaptor::assign(iTJSDispatch2* anotherAdaptor)
 {

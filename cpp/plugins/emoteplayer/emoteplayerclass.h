@@ -68,7 +68,7 @@ private:
         storage = v; \
     }
 
-class SeparateLayerAdaptor : public tTJSCustomObject
+class SeparateLayerAdaptor : public tTJSDispatch
 {
 public:
     SeparateLayerAdaptor(iTJSDispatch2* targetLayer);

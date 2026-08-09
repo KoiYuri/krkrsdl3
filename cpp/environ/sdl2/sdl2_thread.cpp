@@ -48,9 +48,9 @@ tTVPThread::~tTVPThread()
 {
     if (!Terminated)
         Terminate();
-    delete THR_IMPL;
     SDL_DestroyCond(THR_IMPL->cond);
     SDL_DestroyMutex(THR_IMPL->mutex);
+    delete THR_IMPL;
     _impl = NULL;
 }
 //---------------------------------------------------------------------------
