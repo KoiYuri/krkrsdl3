@@ -77,7 +77,6 @@ tjs_int64 TVPWideCharToUtf8String(const tjs_wchar* in, char* out, size_t max_len
 bool TVP_utf8_to_utf16(const char* in, tjs_wchar* out);
 tjs_int64 TVPUtf8ToWideCharString(const char* in, tjs_wchar* out);
 tjs_int64 TVPUtf8ToWideCharString(const char* in, tjs_uint length, tjs_wchar* out);
-uint16_t utf8_to_unicode(const char* utf8);
 std::vector<uint32_t> decodeUTF8ToTTF(const char* utf8_str);
 std::vector<tjs_wchar> decodeUTF8ToTTFe(const char* utf8_str);
 tjs_int64 utf8_char_len(const char* str);
@@ -89,6 +88,49 @@ const char* utf8_char_get(const char* str, int idx);
 bool TJS_iswspace(const char* chs);
 bool TJS_iswdigit(const char* chs);
 tjs_int TJS_iswalpha(const char* chs);
+inline tjs_uint32 TJS_utf8_to_unicode(const char* chs)
+{
+    const unsigned char* p = (const unsigned char*)chs;
+    if (p[0] < 0x80)
+        return p[0];
+    else if (p[0] < 0xE0 && (p[1] & 0xC0) == 0x80)
+        return ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+    else if (p[0] < 0xF0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80)
+        return ((tjs_uint32)(p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+    else if ((p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80)
+        return ((tjs_uint32)(p[0] & 0x07) << 18) | ((tjs_uint32)(p[1] & 0x3F) << 12) |
+                ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+    else
+        return 0;
+}
+inline int TJS_unicode_to_utf8(tjs_uint32 code, tjs_char ch[5])
+{
+    int n = 0;
+    if (code < 0x80)
+    {
+        ch[n++] = (tjs_char)code;
+    }
+    else if (code < 0x800)
+    {
+        ch[n++] = (tjs_char)(0xC0 | (code >> 6));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    else if (code < 0x10000)
+    {
+        ch[n++] = (tjs_char)(0xE0 | (code >> 12));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    else
+    {
+        ch[n++] = (tjs_char)(0xF0 | ((code >> 18) & 0x07));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 12) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    ch[n] = 0;
+    return n;
+}
 
 int TJS_strcmp(const tjs_char* src, const tjs_char* dst);
 int TJS_strncmp(const tjs_char* first, const tjs_char* last, size_t count);

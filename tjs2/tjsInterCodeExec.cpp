@@ -2956,20 +2956,7 @@ void tTJSInterCodeContext::CharacterCodeOf(tTJSVariant& val)
         // 而非首字节——否则非 ASCII 字符(如中文)会被截成单字节，且在
         // signed char 平台(iOS/macOS ARM64)得到负值，破坏 KAG 编辑框等
         // 依赖 `#key >= 32` 的字符范围判断，导致中文无法输入。
-        const unsigned char* p = (const unsigned char*)(const tjs_char*)*str;
-        tjs_uint32 code;
-        if (p[0] < 0x80)
-            code = p[0];
-        else if (p[0] < 0xE0 && (p[1] & 0xC0) == 0x80)
-            code = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
-        else if (p[0] < 0xF0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80)
-            code = ((tjs_uint32)(p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-        else if ((p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80)
-            code = ((tjs_uint32)(p[0] & 0x07) << 18) | ((tjs_uint32)(p[1] & 0x3F) << 12) |
-                   ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-        else
-            code = 0; // 非法/不完整 UTF-8
-        val = tTVInteger(code);
+        val = tTVInteger(TJS_utf8_to_unicode((const tjs_char*)*str));
         str->Release();
         return;
     }
@@ -2982,30 +2969,7 @@ void tTJSInterCodeContext::CharacterCodeFrom(tTJSVariant& val)
     // 对称。原实现只存低字节，导致 $0x8FD9 生不出「这」等非 ASCII 字符。
     tjs_uint32 code = (tjs_uint32)val.AsInteger();
     tjs_char ch[5];
-    int n = 0;
-    if (code < 0x80)
-    {
-        ch[n++] = (tjs_char)code;
-    }
-    else if (code < 0x800)
-    {
-        ch[n++] = (tjs_char)(0xC0 | (code >> 6));
-        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
-    }
-    else if (code < 0x10000)
-    {
-        ch[n++] = (tjs_char)(0xE0 | (code >> 12));
-        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
-        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
-    }
-    else
-    {
-        ch[n++] = (tjs_char)(0xF0 | ((code >> 18) & 0x07));
-        ch[n++] = (tjs_char)(0x80 | ((code >> 12) & 0x3F));
-        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
-        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
-    }
-    ch[n] = 0;
+    TJS_unicode_to_utf8(code, ch);
     val = ch;
 }
 //---------------------------------------------------------------------------

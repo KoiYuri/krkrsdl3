@@ -832,59 +832,6 @@ tjs_int64 TVPUtf8ToWideCharString(const char* in, tjs_uint length, tjs_wchar* ou
     return count;
 }
 //---------------------------------------------------------------------------
-uint16_t utf8_to_unicode(const char* utf8)
-{
-    if (!utf8 || *utf8 == '\0')
-        return 0;
-
-    unsigned char c = (unsigned char)*utf8;
-    tjs_uint32 codepoint = 0;
-
-    if (c < 0x80)
-    {
-        codepoint = c;
-    }
-    else if ((c & 0xE0) == 0xC0)
-    {
-        codepoint = (c & 0x1F) << 6;
-        if (utf8[1] && ((unsigned char)utf8[1] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[1] & 0x3F);
-        }
-    }
-    else if ((c & 0xF0) == 0xE0)
-    {
-        codepoint = (c & 0x0F) << 12;
-        if (utf8[1] && ((unsigned char)utf8[1] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[1] & 0x3F) << 6;
-        }
-        if (utf8[2] && ((unsigned char)utf8[2] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[2] & 0x3F);
-        }
-    }
-    else if ((c & 0xF8) == 0xF0)
-    {
-        codepoint = (c & 0x07) << 18;
-        if (utf8[1] && ((unsigned char)utf8[1] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[1] & 0x3F) << 12;
-        }
-        if (utf8[2] && ((unsigned char)utf8[2] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[2] & 0x3F) << 6;
-        }
-        if (utf8[3] && ((unsigned char)utf8[3] & 0xC0) == 0x80)
-        {
-            codepoint |= (utf8[3] & 0x3F);
-        }
-        return 0;
-    }
-
-    return (uint16_t)codepoint;
-}
-//---------------------------------------------------------------------------
 std::vector<uint32_t> decodeUTF8ToTTF(const char* utf8_str)
 {
     std::vector<uint32_t> codepoints;

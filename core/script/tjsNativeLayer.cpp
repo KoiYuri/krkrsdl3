@@ -3895,25 +3895,8 @@ void tTJSNI_BaseLayer::FireKeyPress(tjs_uint16 key)
 {
     if (Owner && !Shutdown)
     {
-        tjs_char buf[4];
-        if (key < 0x80)
-        {
-            buf[0] = (tjs_char)key;
-            buf[1] = 0;
-        }
-        else if (key < 0x800)
-        {
-            buf[0] = (tjs_char)(0xC0 | (key >> 6));
-            buf[1] = (tjs_char)(0x80 | (key & 0x3F));
-            buf[2] = 0;
-        }
-        else
-        {
-            buf[0] = (tjs_char)(0xE0 | (key >> 12));
-            buf[1] = (tjs_char)(0x80 | ((key >> 6) & 0x3F));
-            buf[2] = (tjs_char)(0x80 | (key & 0x3F));
-            buf[3] = 0;
-        }
+        tjs_char buf[5];
+        TJS_unicode_to_utf8(key, buf);
         tTJSVariant param[2];
         param[0] = buf;
         param[1] = true;
@@ -10148,7 +10131,7 @@ TJS_BEGIN_NATIVE_METHOD_DECL(/*func. name*/ onKeyPress)
         if (p.IsEmpty())
             code = 0;
         else
-            code = utf8_to_unicode(p.c_str());
+            code = TJS_utf8_to_unicode(p.c_str());
         _this->DefaultKeyPress(code);
     }
 
