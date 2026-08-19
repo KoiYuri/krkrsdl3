@@ -100,30 +100,120 @@ static size_t _TextStream_mbstowcs(int (*func_mbtowc)(unsigned short*, const uns
     return count;
 }
 
+// 宽容转换：遇到当前编码无法解码的孤立坏字节时，不再整篇失败，而是用替换字符
+// U+FFFD 顶替并前进一个字节继续。out_errors 返回被替换的坏字节数量，供调用方在
+// 多个候选编码里挑“最合身”（坏字节最少）的那个。永不返回 -1。
+static const tjs_wchar TextStream_ReplacementChar = 0xFFFD;
+static size_t _TextStream_mbstowcs_lenient(int (*func_mbtowc)(unsigned short*,
+                                                              const unsigned char*),
+                                           tjs_wchar* pwcs,
+                                           const tjs_char* s,
+                                           size_t n,
+                                           size_t* out_errors)
+{
+    size_t count = 0;
+    size_t errors = 0;
+    int cl;
+    if (!s)
+    {
+        if (out_errors)
+            *out_errors = (size_t)-1;
+        return (size_t)-1;
+    }
+    if (!pwcs)
+    {
+        while (*s)
+        {
+            unsigned short wc;
+            cl = func_mbtowc(&wc, (const unsigned char*)s);
+            if (cl <= 0)
+            {
+                ++errors;
+                s += 1;
+            }
+            else
+            {
+                s += cl;
+            }
+            ++count;
+        }
+    }
+    else
+    {
+        while (*s && n > 0)
+        {
+            cl = func_mbtowc((unsigned short*)pwcs, (const unsigned char*)s);
+            if (cl <= 0)
+            {
+                *(unsigned short*)pwcs = TextStream_ReplacementChar;
+                ++errors;
+                s += 1;
+            }
+            else
+            {
+                s += cl;
+            }
+            n--;
+            pwcs++;
+            ++count;
+        }
+    }
+    if (out_errors)
+        *out_errors = errors;
+    return count;
+}
+
+// 所有编码都无法整篇干净解码时，选一个坏字节最少的编码来做宽容解码。
+// 选择过程只依赖输入串本身，因此“量长度”和“真正写入”两趟必然得到一致结果。
+static int (*_TextStream_pick_lenient_encoding(const tjs_char* s))(unsigned short*,
+                                                                   const unsigned char*)
+{
+    int (*candidates[3])(unsigned short*, const unsigned char*) = { utf8_mbtowc, sjis_mbtowc,
+                                                                    gbk_mbtowc };
+    int (*best)(unsigned short*, const unsigned char*) = gbk_mbtowc;
+    size_t best_errors = (size_t)-1;
+    for (int i = 0; i < 3; i++)
+    {
+        size_t errs = 0;
+        _TextStream_mbstowcs_lenient(candidates[i], nullptr, s, 0, &errs);
+        if (errs < best_errors)
+        {
+            best_errors = errs;
+            best = candidates[i];
+        }
+    }
+    return best;
+}
+
 size_t TextStream_mbstowcs(tjs_wchar* pwcs, const tjs_char* s, size_t n)
 {
     if (mbtowc_for_text_stream)
     {
+        // 脚本通过 Storages.setTextEncoding 指定编码时，始终服从脚本的明确设置。
         return _TextStream_mbstowcs(mbtowc_for_text_stream, pwcs, s, n);
     }
-    // trying every encoding available
-    size_t ret = _TextStream_mbstowcs(sjis_mbtowc, pwcs, s, n);
-    if (ret == (size_t)-1)
-    {
-        ret = _TextStream_mbstowcs(utf8_mbtowc, pwcs, s, n);
-        if (ret != (size_t)-1)
-        {
-            mbtowc_for_text_stream = utf8_mbtowc;
-            return ret;
-        }
-        ret = _TextStream_mbstowcs(gbk_mbtowc, pwcs, s, n);
-        if (ret != (size_t)-1)
-        {
-            mbtowc_for_text_stream = gbk_mbtowc;
-            return ret;
-        }
-    }
-    return ret;
+
+    // 无 BOM 文本不能把第一次探测结果缓存到全局。
+    // 同一个游戏可能同时包含 Shift-JIS、UTF-8 和 UTF-16 脚本；如果前一个
+    // 文件恰好只有 ASCII 或是日文，后续汉化脚本就会被错误地按同一编码读取。
+    // UTF-8 优先可以正确处理汉化脚本，失败后再兼容原版日文和 GBK 脚本。
+    size_t ret = _TextStream_mbstowcs(utf8_mbtowc, pwcs, s, n);
+    if (ret != (size_t)-1)
+        return ret;
+    ret = _TextStream_mbstowcs(sjis_mbtowc, pwcs, s, n);
+    if (ret != (size_t)-1)
+        return ret;
+    ret = _TextStream_mbstowcs(gbk_mbtowc, pwcs, s, n);
+    if (ret != (size_t)-1)
+        return ret;
+
+    // 没有任何编码能整篇干净解码。手工汉化脚本常见这种情况：整篇是规整的 GBK，
+    // 但夹着一两个残缺字节（例如 [w] 标签旁遗留了半个全角标点的首字节）。原来的
+    // 做法是整篇判失败，最终抛出 “Cannot convert given narrow string to wide
+    // string”，玩家看到的就是 jump 时报错卡死。这里改为选最合身的编码做宽容解码，
+    // 只把那一两个坏字节替换掉，其余正文照常显示。
+    int (*best)(unsigned short*, const unsigned char*) = _TextStream_pick_lenient_encoding(s);
+    return _TextStream_mbstowcs_lenient(best, pwcs, s, n, nullptr);
 }
 
 static ttstr enc_utf8 = TJS_N("utf8"), enc_utf8_2 = TJS_N("utf-8"), enc_utf16 = TJS_N("utf16"),
