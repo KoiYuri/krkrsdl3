@@ -22,6 +22,7 @@ java_pid*.hprof
 .cxx/
 .hvigor/
 ohos/entry/src/main/resources/rawfile/
+ohos/entry/oh_modules/
 # hvigor
 ohos/entry/build/
 ohos/.hvigor/
