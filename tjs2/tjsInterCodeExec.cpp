@@ -2951,8 +2951,25 @@ void tTJSInterCodeContext::CharacterCodeOf(tTJSVariant& val)
     tTJSVariantString* str = val.AsString();
     if (str)
     {
-        const tjs_char* ch = (const tjs_char*)*str;
-        val = tTVInteger(ch[0]);
+        // tjs_char 在本移植中为 UTF-8 字节(typedef char tjs_char)。
+        // '#' 运算符须返回首字符的 Unicode 码点(与原版 UTF-16 语义一致)，
+        // 而非首字节——否则非 ASCII 字符(如中文)会被截成单字节，且在
+        // signed char 平台(iOS/macOS ARM64)得到负值，破坏 KAG 编辑框等
+        // 依赖 `#key >= 32` 的字符范围判断，导致中文无法输入。
+        const unsigned char* p = (const unsigned char*)(const tjs_char*)*str;
+        tjs_uint32 code;
+        if (p[0] < 0x80)
+            code = p[0];
+        else if (p[0] < 0xE0 && (p[1] & 0xC0) == 0x80)
+            code = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+        else if (p[0] < 0xF0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80)
+            code = ((tjs_uint32)(p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+        else if ((p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80)
+            code = ((tjs_uint32)(p[0] & 0x07) << 18) | ((tjs_uint32)(p[1] & 0x3F) << 12) |
+                   ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+        else
+            code = 0; // 非法/不完整 UTF-8
+        val = tTVInteger(code);
         str->Release();
         return;
     }
@@ -2961,9 +2978,34 @@ void tTJSInterCodeContext::CharacterCodeOf(tTJSVariant& val)
 //---------------------------------------------------------------------------
 void tTJSInterCodeContext::CharacterCodeFrom(tTJSVariant& val)
 {
-    tjs_char ch[2];
-    ch[0] = static_cast<tjs_char>(val.AsInteger());
-    ch[1] = 0;
+    // '$' 运算符：把 Unicode 码点编码为 UTF-8(tjs_char=char)，与 '#'(CharacterCodeOf)
+    // 对称。原实现只存低字节，导致 $0x8FD9 生不出「这」等非 ASCII 字符。
+    tjs_uint32 code = (tjs_uint32)val.AsInteger();
+    tjs_char ch[5];
+    int n = 0;
+    if (code < 0x80)
+    {
+        ch[n++] = (tjs_char)code;
+    }
+    else if (code < 0x800)
+    {
+        ch[n++] = (tjs_char)(0xC0 | (code >> 6));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    else if (code < 0x10000)
+    {
+        ch[n++] = (tjs_char)(0xE0 | (code >> 12));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    else
+    {
+        ch[n++] = (tjs_char)(0xF0 | ((code >> 18) & 0x07));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 12) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | ((code >> 6) & 0x3F));
+        ch[n++] = (tjs_char)(0x80 | (code & 0x3F));
+    }
+    ch[n] = 0;
     val = ch;
 }
 //---------------------------------------------------------------------------
