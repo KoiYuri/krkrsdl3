@@ -30,32 +30,9 @@ tjs_error krkr_str_ord(tTJSVariant* result,
         if (type.Type() == tvtString)
         {
             const tTJSVariantString* vs = type.AsStringNoAddRef();
-            const unsigned char* p = reinterpret_cast<const unsigned char*>(vs->ShortString);
-            if (!*p)
+            if (!vs)
                 return 0;
-            int tmp = 0;
-            if ((*p & 0x80) == 0)
-            {
-                tmp = *p;
-            }
-            else if ((*p & 0xE0) == 0xC0)
-            {
-                tmp = ((*p & 0x1F) << 6) | (p[1] & 0x3F);
-            }
-            else if ((*p & 0xF0) == 0xE0)
-            {
-                tmp = ((*p & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-            }
-            else if ((*p & 0xF8) == 0xF0)
-            {
-                tmp = ((*p & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) |
-                      (p[3] & 0x3F);
-            }
-            else
-            {
-                tmp = 0;
-            }
-            *result = (tjs_int)tmp;
+            *result = (tjs_int)TJS_utf8_to_unicode((const tjs_char*)*vs);
         }
         else
         {

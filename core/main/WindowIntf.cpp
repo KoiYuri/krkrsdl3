@@ -543,25 +543,8 @@ void tTJSNI_BaseWindow::OnKeyPress(tjs_uint16 key)
         return;
     if (Owner)
     {
-        tjs_char buf[4];
-        if (key < 0x80)
-        {
-            buf[0] = (tjs_char)key;
-            buf[1] = 0;
-        }
-        else if (key < 0x800)
-        {
-            buf[0] = (tjs_char)(0xC0 | (key >> 6));
-            buf[1] = (tjs_char)(0x80 | (key & 0x3F));
-            buf[2] = 0;
-        }
-        else
-        {
-            buf[0] = (tjs_char)(0xE0 | (key >> 12));
-            buf[1] = (tjs_char)(0x80 | ((key >> 6) & 0x3F));
-            buf[2] = (tjs_char)(0x80 | (key & 0x3F));
-            buf[3] = 0;
-        }
+        tjs_char buf[5];
+        TJS_unicode_to_utf8(key, buf);
         tTJSVariant arg[1] = {buf};
         static ttstr eventname(TJS_N("onKeyPress"));
         TVPPostEvent(Owner, Owner, eventname, 0, TVP_EPT_IMMEDIATE, 1, arg);
