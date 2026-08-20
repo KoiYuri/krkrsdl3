@@ -5,7 +5,6 @@
 #include "Platform.h"
 #include "tjsArray.h"
 #include "tjsDictionary.h"
-#include "TVPSettings.h"
 
 #include "xp3filter.h"
 
@@ -300,30 +299,6 @@ using namespace PSB;
 
 namespace emoteplayer
 {
-#pragma region glprogram
-
-uint64_t createEmptyTexture(int width, int height)
-{
-    if (TVPSettings.renderer == "opengl")
-    {
-        GLuint texture;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        return texture;
-    }
-    // 软渲染由data保存数据
-    return 0;
-}
-
-#pragma endregion
-
 #pragma region Base
 
 emoteframe::emoteframe(emotefile* filePtr, uint32_t startOffset) : _filePtr(filePtr)
@@ -1475,10 +1450,13 @@ emoteicon::~emoteicon()
 {
     if (data != nullptr)
         delete[] data;
-    if (TVPSettings.renderer == "opengl" && selftexture != 0 &&
-        glIsTexture((GLuint)selftexture) == GL_TRUE)
+    // 纹理由 core/render 的 2D 渲染器统一管理
+    if (selftexture != nullptr)
     {
-        glDeleteTextures(1, (GLuint*)&selftexture);
+        krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+        if (renderer)
+            renderer->DestroyTexture(selftexture);
+        selftexture = nullptr;
     }
 }
 void emoteicon::ensureLoad()
@@ -1489,65 +1467,32 @@ void emoteicon::ensureLoad()
         int datasize = width * height * 4;
         data = new uint8_t[datasize];
         std::memset(data, 0, datasize);
-        selftexture = createEmptyTexture(width, height);
         // 读取像素数据
         _filePtr->readIconTobuffer(data, width * height * 4, width * 4, this);
 
-        // GPU渲染
-        if (TVPSettings.renderer == "opengl")
+        // 统一字节序为 RGBA（原 GL 桌面路径以 BGRA 直传、软渲染路径做 R/B 交换，
+        // 抽象后所有后端统一，行为一致）
+        if (_filePtr->colorType == 0)
         {
-            glBindTexture(GL_TEXTURE_2D, selftexture);
-#if _KRKRSDL3_GL
-            if (_filePtr->colorType == 0)
+            for (size_t i = 0; i < (size_t)width * height; i++)
             {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE,
-                             data);
+                uint8_t tmp = data[4 * i];
+                data[4 * i] = data[4 * i + 2];
+                data[4 * i + 2] = tmp;
             }
-            else if (_filePtr->colorType == 1)
-            {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                             data);
-            }
-            else
-            {
-                TVPConsoleLog("unknow colorType");
-            }
-#else
-            if (_filePtr->colorType == 0)
-            {
-                // 色彩转化
-                for (size_t i = 0; i < width * height; i++)
-                {
-                    uint8_t tmp = data[4 * i];
-                    data[4 * i] = data[4 * i + 2];
-                    data[4 * i + 2] = tmp;
-                }
-            }
-            else if (_filePtr->colorType != 1)
-            {
-                TVPConsoleLog("unknow colorType");
-            }
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                         data);
-#endif
-            glGenerateMipmap(GL_TEXTURE_2D);
         }
-        else
+        else if (_filePtr->colorType != 1)
         {
-            // 色彩转化
-            if (_filePtr->colorType == 0)
-            {
-                for (size_t i = 0; i < width * height; i++)
-                {
-                    uint8_t tmp = data[4 * i];
-                    data[4 * i] = data[4 * i + 2];
-                    data[4 * i + 2] = tmp;
-                }
-            }
-            else if (_filePtr->colorType != 1)
-            {
-                TVPConsoleLog("unknow colorType");
-            }
+            TVPConsoleLog("unknow colorType");
+        }
+
+        // 纹理交给 core/render 的 2D 渲染器（GL 后端建 GPU 纹理，软渲染后端建 CPU 缓冲）
+        krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+        if (renderer)
+        {
+            selftexture = renderer->CreateTexture(width, height);
+            if (selftexture)
+                renderer->UpdateTexture(selftexture, data, width, height, width * 4);
         }
     }
 }

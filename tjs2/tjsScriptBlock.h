@@ -43,6 +43,7 @@ public:
 private:
     tTJS* Owner;
     tjs_int RefCount;
+    tjs_size GCIndex;
     tjs_char* Script;
     tjs_char* Name;
     tjs_int LineOffset;

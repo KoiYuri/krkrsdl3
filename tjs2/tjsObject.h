@@ -101,6 +101,9 @@ class tTJSDispatch : public iTJSDispatch2
 private:
     tjs_uint RefCount;
 
+protected:
+    tjs_size GCIndex;
+
 public:
     tTJSDispatch();
     virtual ~tTJSDispatch();

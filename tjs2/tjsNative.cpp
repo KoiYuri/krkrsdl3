@@ -90,7 +90,7 @@ tTJSNativeClassMethod::tTJSNativeClassMethod(tTJSNativeClassMethodCallback proce
     Process = processfunc;
     if (TJSObjectHashMapEnabled())
         TJSAddObjectHashRecord(this);
-    _allTJSRegister.registerObject(this);
+    this->GCIndex = _allTJSRegister.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSNativeClassMethod::~tTJSNativeClassMethod()
@@ -99,7 +99,7 @@ tTJSNativeClassMethod::~tTJSNativeClassMethod()
         TJSRemoveObjectHashRecord(this);
     if (!_tjsForceShutdown)
     {
-        _allTJSRegister.unregisterObject(this);
+        _allTJSRegister.unregisterObject(this->GCIndex);
     }
 }
 //---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ tTJSNativeClassProperty::tTJSNativeClassProperty(tTJSNativeClassPropertyGetCallb
     Set = set;
     if (TJSObjectHashMapEnabled())
         TJSAddObjectHashRecord(this);
-    _allTJSRegister.registerObject(this);
+    this->GCIndex = _allTJSRegister.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSNativeClassProperty::~tTJSNativeClassProperty()
@@ -203,7 +203,7 @@ tTJSNativeClassProperty::~tTJSNativeClassProperty()
         TJSRemoveObjectHashRecord(this);
     if (!_tjsForceShutdown)
     {
-        _allTJSRegister.unregisterObject(this);
+        _allTJSRegister.unregisterObject(this->GCIndex);
     }
 }
 //---------------------------------------------------------------------------

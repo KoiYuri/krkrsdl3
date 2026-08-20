@@ -25,7 +25,10 @@ struct TVPGlobalSettings
     bool ogl_accurate_render;
     std::string default_font;
     bool force_default_font;
-    std::string renderer;
+    std::string renderer; // 解析后的渲染后端名：software / opengl / vulkan（见 core/render/backend）
+    int window_width;     // 初始窗口宽度（-window=WxH，默认 1280）
+    int window_height;    // 初始窗口高度（-window=WxH，默认 720）
+    int vsync;            // 垂直同步开关 0/1（-vsync=0/1，默认 1）
     int software_draw_thread;
 };
 extern TVPGlobalSettings TVPSettings;

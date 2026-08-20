@@ -1,0 +1,30 @@
+#version 450
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 FragColor;
+layout(set = 0, binding = 0) uniform sampler2D texture1;
+layout(set = 1, binding = 0) uniform sampler2D maskTexture;
+layout(push_constant) uniform PushConstants {
+    vec2 viewport;    // 蒙版 UV 归一化用
+    float enableMask; // 0.0/1.0
+    float enableColor;// 0.0/1.0
+    float opa;
+    vec4 uniformColor;
+} pc;
+void main()
+{
+    vec4 maskColor = vec4(1.0);
+    if (pc.enableMask > 0.5) {
+        vec2 normalizedCoord = gl_FragCoord.xy / pc.viewport;
+        maskColor = texture(maskTexture, normalizedCoord);
+    }
+    vec4 color = texture(texture1, texCoord);
+    if (pc.enableMask > 0.5 && maskColor.a < 0.5) {
+        discard;
+    } else {
+        if (pc.enableColor > 0.5) {
+            color = vec4(pc.uniformColor.xyz, pc.uniformColor.a * color.a);
+        }
+        color.a = color.a * pc.opa;
+        FragColor = color;
+    }
+}

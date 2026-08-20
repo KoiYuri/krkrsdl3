@@ -66,8 +66,8 @@ namespace emoteplayer
         // method
         void checkDrawStatus(float tick, std::vector<emoteRender>& renderList, emotelimit lim);
         void progress(float tick, std::vector<emoteRender>& renderList, emotelimit lim);
-        void draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex);
-        void drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask);
+        // 通过 core/render 的 2D 渲染抽象绘制（插件无渲染后端区分）
+        void draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget);
         float getCurrentRenderZ();
         const std::vector<emoterect>& getShapeList() const { return shapeList; }
 
@@ -134,8 +134,7 @@ namespace emoteplayer
 
         float getTickByIdx(int32_t parameterIdx);
         void progress(float tick, std::vector<emoteRender>& renderList, emotelimit lim);
-        void draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex);
-        void drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask);
+        void draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget);
         bool contains(tjs_real x, tjs_real y);
         const std::vector<emoterect>& getShapeList() const { return shapeList; }
         // 根据emotenode*查找对应的emotenoderef
@@ -170,8 +169,7 @@ namespace emoteplayer
 
         // progress/draw接口(替代_mainMotionRef)
         void progress(float tick, std::vector<emoteRender>& renderList, emotelimit lim);
-        void draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex);
-        void drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask);
+        void draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget);
         // 查找数值
         bool getTickByName(const std::string& name, tjs_real& retVal);
 

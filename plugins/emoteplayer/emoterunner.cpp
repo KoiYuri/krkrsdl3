@@ -1,7 +1,6 @@
 #include "emoterunner.h"
 
 #include "Platform.h"
-#include "TVPSettings.h"
 
 #define GLM_ASSERT_VALID(matrix) \
     do \
@@ -19,225 +18,6 @@
 
 namespace emoteplayer
 {
-
-#pragma region glprogram
-
-static GLuint emotenodeprogram = 0;
-static GLuint emotenodeVAO = 0;
-static GLuint emotenodeVBO = 0;
-static GLuint emotenodeIBO = 0;
-static size_t emotenodeVBOSize = 0;
-static size_t emotenodeIBOSize = 0;
-
-// GLES 2.0 compatible shaders (no tessellation)
-#if _KRKRSDL3_GL
-static const char* vertexShaderSrc = R"(
-            #version 330 core
-            layout (location = 0) in vec2 aPos;
-            layout (location = 1) in vec2 aTexCoord;
-            out vec2 texCoord;
-
-            void main()
-            {
-                gl_Position = vec4(aPos.xy, 0.0, 1.0);
-                texCoord = aTexCoord;
-            }
-            )";
-static const char* fragmentShaderSrc = R"(
-            #version 330 core
-            out vec4 FragColor;
-            in vec2 texCoord;
-            uniform sampler2D texture1;
-            uniform bool enableMask;
-            uniform vec2 viewportSize;
-            uniform sampler2D maskTexture;
-            uniform float opa;
-            uniform bool enableColor;
-            uniform vec4 uniformColor;
-            void main()
-            {
-                vec4 maskColor = vec4(1.0f);
-                if (enableMask) {
-                    vec2 normalizedCoord = gl_FragCoord.xy / viewportSize;
-                    maskColor = texture(maskTexture, normalizedCoord);
-                }
-
-                vec4 color = texture(texture1, texCoord);
-                if (enableMask && maskColor.a < 0.5) {
-                    discard;
-                } else {
-                    if(enableColor)
-                    {
-                        color = vec4(uniformColor.xyz, uniformColor.a * color.a);
-                    }
-                    color.a = color.a * opa;
-                    FragColor = vec4(color.rgba);
-                }
-            }
-        )";
-#else
-static const char* vertexShaderSrc = R"(#version 100
-            attribute vec2 aPos;
-            attribute vec2 aTexCoord;
-            varying vec2 texCoord;
-
-            void main()
-            {
-                gl_Position = vec4(aPos.xy, 0.0, 1.0);
-                texCoord = aTexCoord;
-            }
-            )";
-static const char* fragmentShaderSrc = R"(#version 100
-            precision mediump float;
-            varying vec2 texCoord;
-            uniform sampler2D texture1;
-            uniform bool enableMask;
-            uniform vec2 viewportSize;
-            uniform sampler2D maskTexture;
-            uniform float opa;
-            uniform bool enableColor;
-            uniform vec4 uniformColor;
-            void main()
-            {
-                vec4 maskColor = vec4(1.0);
-                if (enableMask) {
-                    vec2 normalizedCoord = gl_FragCoord.xy / viewportSize;
-                    maskColor = texture2D(maskTexture, normalizedCoord);
-                }
-
-                vec4 color = texture2D(texture1, texCoord);
-                if (enableMask && maskColor.a < 0.5) {
-                    discard;
-                } else {
-                    if(enableColor)
-                    {
-                        color = vec4(uniformColor.xyz, uniformColor.a * color.a);
-                    }
-                    color.a = color.a * opa;
-                    gl_FragColor = color;
-                }
-            }
-        )";
-#endif
-GLuint compileShader(GLenum type, const char* src)
-{
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &src, nullptr);
-    glCompileShader(shader);
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char log[512];
-        glGetShaderInfoLog(shader, 512, nullptr, log);
-        TVPConsoleLog("Shader compile error: %s", log);
-    }
-    return shader;
-}
-GLuint createRenderProgram()
-{
-    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShaderSrc);
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
-    GLuint prog = glCreateProgram();
-    glAttachShader(prog, vs);
-    glAttachShader(prog, fs);
-    glLinkProgram(prog);
-    GLint success;
-    glGetProgramiv(prog, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        char log[512];
-        glGetProgramInfoLog(prog, 512, nullptr, log);
-        TVPConsoleLog("Program link error: %s", log);
-    }
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    return prog;
-}
-GLuint createEmptyDepthTexture(int width, int height)
-{
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT,
-                 GL_UNSIGNED_INT, NULL);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    return texture;
-}
-GLuint createFBO(GLuint texture, GLuint depthtexture)
-{
-    GLuint result;
-    glGenFramebuffers(1, &result);
-    glBindFramebuffer(GL_FRAMEBUFFER, result);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthtexture, 0);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        TVPConsoleLog("Framebuffer不完整!");
-    }
-
-    return result;
-}
-GLfloat default_control_points[32] = {
-    0.000000f, 0.000000f, 0.333333f, 0.000000f, 0.666667f, 0.000000f, 1.000000f, 0.000000f,
-    0.000000f, 0.333333f, 0.333333f, 0.333333f, 0.666667f, 0.333333f, 1.000000f, 0.333333f,
-    0.000000f, 0.666667f, 0.333333f, 0.666667f, 0.666667f, 0.666667f, 1.000000f, 0.666667f,
-    0.000000f, 1.000000f, 0.333333f, 1.000000f, 0.666667f, 1.000000f, 1.000000f, 1.000000f};
-void glBaseSet()
-{
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-#if _KRKRSDL3_GL
-    glClearDepth(-1.0f);
-#else
-    glClearDepthf(-1.0f);
-#endif
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_GEQUAL);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (emotenodeprogram == 0 || glIsProgram(emotenodeprogram) != GL_TRUE)
-    {
-        // 程序
-        emotenodeprogram = createRenderProgram();
-        // array
-        glGenVertexArrays(1, &emotenodeVAO);
-    }
-    glUseProgram(emotenodeprogram);
-    glBindVertexArray(emotenodeVAO);
-}
-void glBaseSetWithoutClear()
-{
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-#if _KRKRSDL3_GL
-    glClearDepth(-1.0f);
-#else
-    glClearDepthf(-1.0f);
-#endif
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_GEQUAL);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
-    if (emotenodeprogram == 0 || glIsProgram(emotenodeprogram) != GL_TRUE)
-    {
-        // 程序
-        emotenodeprogram = createRenderProgram();
-        // array
-        glGenVertexArrays(1, &emotenodeVAO);
-    }
-    glUseProgram(emotenodeprogram);
-    glBindVertexArray(emotenodeVAO);
-}
-
-#pragma endregion
-
 #pragma region BezierHelpers
 
 // Cubic Bezier basis functions
@@ -469,99 +249,6 @@ static void buildRectMesh(const std::vector<emoteRender>& renderMethod,
     outIndices.push_back(1);
     outIndices.push_back(3);
     outIndices.push_back(2);
-}
-
-#pragma endregion
-
-#pragma region softwareblend
-
-struct ColorRGBA
-{
-    uint8_t r, g, b, a;
-};
-
-static inline uint8_t clampf(float v)
-{
-    if (v < 0)
-        return 0;
-    if (v > 255)
-        return 255;
-    return (uint8_t)v;
-}
-
-static ColorRGBA blendPixels(
-    ColorRGBA src, ColorRGBA dst, int mode, float opa, ColorRGBA uniformColor = {0, 0, 0, 0})
-{
-    float sa = src.a / 255.0f * opa;
-    float da = dst.a / 255.0f;
-
-    if (sa <= 0.001f)
-        return dst;
-    if (sa >= 0.999f && mode == 0)
-        return src;
-
-    if (mode == 21)
-    {
-        src = uniformColor;
-        src.a = (uint8_t)(uniformColor.a * opa);
-        sa = src.a / 255.0f;
-    }
-    float sr = src.r / 255.0f, sg = src.g / 255.0f, sb = src.b / 255.0f;
-    float dr = dst.r / 255.0f, dg = dst.g / 255.0f, db = dst.b / 255.0f;
-    float outR = 0, outG = 0, outB = 0, outA = 0;
-
-    switch (mode)
-    {
-        case 0:
-            outA = sa + da * (1.0f - sa);
-            if (outA > 0.001f)
-            {
-                outR = (sr * sa + dr * da * (1.0f - sa)) / outA;
-                outG = (sg * sa + dg * da * (1.0f - sa)) / outA;
-                outB = (sb * sa + db * da * (1.0f - sa)) / outA;
-            }
-            else
-            {
-                outR = sr;
-                outG = sg;
-                outB = sb;
-            }
-            outA = sa + da;
-            break;
-        case 1:
-        case 4:
-            outR = sr * dr + dr;
-            outG = sg * dg + dg;
-            outB = sb * db + db;
-            outA = da * 1.0f;
-            break;
-        case 3:
-            outR = sr * sa + dr * (1 - sa);
-            outG = sg * sa + dg * (1 - sg);
-            outB = sb * sa + db * (1 - sb);
-            outA = std::max(sa, da);
-            break;
-        case 6:
-            break;
-        default:
-            outA = sa + da * (1.0f - sa);
-            if (outA > 0.001f)
-            {
-                outR = (sr * sa + dr * da * (1.0f - sa)) / outA;
-                outG = (sg * sa + dg * da * (1.0f - sa)) / outA;
-                outB = (sb * sa + db * da * (1.0f - sa)) / outA;
-            }
-            else
-            {
-                outR = sr;
-                outG = sg;
-                outB = sb;
-            }
-            outA = sa + da;
-            break;
-    }
-
-    return {clampf(outR * 255), clampf(outG * 255), clampf(outB * 255), clampf(outA * 255)};
 }
 
 #pragma endregion
@@ -1060,301 +747,60 @@ void emotenoderef::progress(float tick, std::vector<emoteRender>& renderList, em
         }
     }
 }
-void emotenoderef::drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask)
+void emotenoderef::draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget)
 {
-    // 软渲染未实现
     if (!isNeedDraw || !isIcon || renderMethod.size() < 1 || currentNode->removed)
         return; // 跳过无需绘制的 和 非icon的 和 无method 的节点
+    if (!renderer || !target)
+        return;
 
     // 跳过空网格
     if (_meshVertices.empty() || _meshIndices.empty())
         return;
 
-    //  提前绘制好蒙版texture
-    if (renderMethod.at(0).hasStencil && bufmask != 0) // 进行Stencil过滤 不考虑复合蒙版的情况了
+    // 提前绘制好蒙版目标（不考虑复合蒙版的情况）
+    if (renderMethod.at(0).hasStencil && maskTarget != 0)
     {
-        std::memset(bufmask, 0, (size_t)lim.width * lim.height * 4);
+        renderer->SetTarget(maskTarget);
+        renderer->ClearTarget(true);
         bool hasDraw = false;
         for (auto maskLayer : renderMethod.at(0).layerNode)
         {
             if (maskLayer != nullptr && maskLayer->currOpa > 0)
             {
                 hasDraw = true;
-                maskLayer->drawSoftware(bufmask, lim, bufmask);
+                maskLayer->draw(renderer, maskTarget, lim, nullptr);
             }
         }
         // 排除异常蒙版
         if (!hasDraw)
             renderMethod.at(0).hasStencil = false;
     }
+
+    // 主体绘制（SetTarget 内部完成视口/深度/混合基础状态设置）
+    renderer->SetTarget(target);
+    renderer->SetMask(renderMethod.at(0).hasStencil ? maskTarget : nullptr);
 
     // 透明度与混色
     float totalOpa = currOpa;
     for (size_t i = 0; i < renderMethod.size(); i++)
         totalOpa *= renderMethod.at(i).opa;
     int blendMode = currbm;
-    ColorRGBA uniformColor = {0, 0, 0, 0};
+    float uniformColor[4] = {0, 0, 0, 0};
     if (blendMode == 21 && frame)
     {
-        uniformColor = {(uint8_t)(frame->color & 0xFF), (uint8_t)((frame->color >> 8) & 0xFF),
-                        (uint8_t)((frame->color >> 16) & 0xFF),
-                        (uint8_t)((frame->color >> 24) & 0xFF)};
+        uniformColor[0] = ((frame->color) & 0xFF) / 255.0f;
+        uniformColor[1] = ((frame->color >> 8) & 0xFF) / 255.0f;
+        uniformColor[2] = ((frame->color >> 16) & 0xFF) / 255.0f;
+        uniformColor[3] = ((frame->color >> 24) & 0xFF) / 255.0f;
     }
+    renderer->SetBlendMode(blendMode, blendMode == 21 ? uniformColor : nullptr);
+    if (blendMode == 6)
+        return; // 该模式不绘制（GL 后端原行为）
 
-    // 绘制所有三角形(使用 edge function + 仿射纹理步进优化)
-    // TODO:优化太难了，还是用opengl渲染吧
-    int pitch = (int)lim.width;
-    uint32_t* dst = (uint32_t*)buf;
-    uint32_t* maskRowBase = bufmask ? (uint32_t*)bufmask : nullptr;
-    ColorRGBA* texData = (ColorRGBA*)ic->data;
-    int texW = ic->width, texH = ic->height;
-    bool hasStencil = renderMethod.at(0).hasStencil;
-    for (size_t idx = 0; idx < _meshIndices.size(); idx += 3)
-    {
-        uint16_t i0 = _meshIndices[idx];
-        uint16_t i1 = _meshIndices[idx + 1];
-        uint16_t i2 = _meshIndices[idx + 2];
-        const MeshVertex& v0 = _meshVertices[i0];
-        const MeshVertex& v1 = _meshVertices[i1];
-        const MeshVertex& v2 = _meshVertices[i2];
-        float x0 = (v0.x + 1.0f) * 0.5f * lim.width;
-        float y0 = (v0.y + 1.0f) * 0.5f * lim.height;
-        float x1 = (v1.x + 1.0f) * 0.5f * lim.width;
-        float y1 = (v1.y + 1.0f) * 0.5f * lim.height;
-        float x2 = (v2.x + 1.0f) * 0.5f * lim.width;
-        float y2 = (v2.y + 1.0f) * 0.5f * lim.height;
-
-        int minX = (int)std::max(0.0f, std::min(x0, std::min(x1, x2)));
-        int maxX = (int)std::min((float)lim.width - 1, std::max(x0, std::max(x1, x2)));
-        int minY = (int)std::max(0.0f, std::min(y0, std::min(y1, y2)));
-        int maxY = (int)std::min((float)lim.height - 1, std::max(y0, std::max(y1, y2)));
-        if (minX > maxX || minY > maxY)
-            continue;
-
-        // Edge function: f_ij(x,y) = a*x + b*y + c
-        // f01: v0→v1, f12: v1→v2, f20: v2→v0
-        // 三角形内部 f01,f12,f20 同号
-        float a01 = y0 - y1, b01 = x1 - x0, c01 = x0 * y1 - x1 * y0;
-        float a12 = y1 - y2, b12 = x2 - x1, c12 = x1 * y2 - x2 * y1;
-        float a20 = y2 - y0, b20 = x0 - x2, c20 = x2 * y0 - x0 * y2;
-
-        float area = a12 * x0 + b12 * y0 + c12; // = 2*有符号面积
-        if (std::abs(area) < 1e-6f) continue;
-        float invArea = 1.0f / area;
-        bool ccw = area > 0;
-
-        // ===== 仿射纹理步进参数 =====
-        // 纹理坐标 tu/tv 是 edge function 的线性组合:
-        //   tu = (v0.u*f12 + v1.u*f20 + v2.u*f01) / area
-        //   => tu(x,y) = (A_u*x + B_u*y + C_u) / area
-        float A_u = v0.u * a12 + v1.u * a20 + v2.u * a01;
-        float B_u = v0.u * b12 + v1.u * b20 + v2.u * b01;
-        float A_v = v0.v * a12 + v1.v * a20 + v2.v * a01;
-        float B_v = v0.v * b12 + v1.v * b20 + v2.v * b01;
-
-        float tu0 = (A_u * minX + B_u * minY + (v0.u * c12 + v1.u * c20 + v2.u * c01)) * invArea;
-        float tv0 = (A_v * minX + B_v * minY + (v0.v * c12 + v1.v * c20 + v2.v * c01)) * invArea;
-        float du_dx = A_u * invArea, dv_dx = A_v * invArea; // 每像素纹理增量
-        float du_dy = B_u * invArea, dv_dy = B_v * invArea; // 每扫描线纹理增量
-
-        // 在(minX,minY)处初始化edge function
-        float f01 = a01 * minX + b01 * minY + c01;
-        float f12 = a12 * minX + b12 * minY + c12;
-        float f20 = a20 * minX + b20 * minY + c20;
-        float df01_dx = a01, df12_dx = a12, df20_dx = a20;
-        float df01_dy = b01, df12_dy = b12, df20_dy = b20;
-
-        int texW_1 = texW - 1, texH_1 = texH - 1;
-        int iw = (int)lim.width;
-
-        for (int py = minY; py <= maxY; py++)
-        {
-            float f01_row = f01, f12_row = f12, f20_row = f20;
-            float tu_row = tu0, tv_row = tv0;
-
-            ColorRGBA* row = (ColorRGBA*)(dst + (size_t)py * pitch);
-            uint32_t* maskRow = maskRowBase ? maskRowBase + (size_t)py * iw : nullptr;
-
-            for (int px = minX; px <= maxX; px++)
-            {
-                bool inside = ccw ? (f01_row >= 0 && f12_row >= 0 && f20_row >= 0)
-                                  : (f01_row <= 0 && f12_row <= 0 && f20_row <= 0);
-                if (inside)
-                {
-                    int tx = (int)(tu_row * texW_1 + 0.5f);
-                    int ty = (int)(tv_row * texH_1 + 0.5f);
-                    if (tx < 0) tx = 0; else if (tx > texW_1) tx = texW_1;
-                    if (ty < 0) ty = 0; else if (ty > texH_1) ty = texH_1;
-
-                    if (!hasStencil || !maskRow || ((maskRow[px] >> 24) & 0xFF) >= 128)
-                    {
-                        row[px] = blendPixels(
-                            texData[(size_t)ty * texW + tx], row[px],
-                            blendMode, totalOpa, uniformColor);
-                    }
-                }
-
-                // 增量更新: edge function + 纹理坐标
-                f01_row += df01_dx; f12_row += df12_dx; f20_row += df20_dx;
-                tu_row += du_dx; tv_row += dv_dx;
-            }
-
-            f01 += df01_dy; f12 += df12_dy; f20 += df20_dy;
-            tu0 += du_dy; tv0 += dv_dy;
-        }
-    }
-}
-void emotenoderef::draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex)
-{
-    if (!isNeedDraw || !isIcon || renderMethod.size() < 1 || currentNode->removed)
-        return; // 跳过无需绘制的 和 非icon的 和 无method 的节点
-
-    // 跳过空网格
-    if (_meshVertices.empty() || _meshIndices.empty())
-        return;
-
-    //  提前绘制好蒙版texture
-    if (renderMethod.at(0).hasStencil && exFbo != 0) // 进行Stencil过滤 不考虑复合蒙版的情况了
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, exFbo);
-        glBaseSet();
-        bool hasDraw = false;
-        for (auto maskLayer : renderMethod.at(0).layerNode)
-        {
-            if (maskLayer != nullptr && maskLayer->currOpa > 0)
-            {
-                hasDraw = true;
-                maskLayer->draw(exFbo, lim, 0, 0);
-            } 
-        }
-        // 排除异常蒙版
-        if (!hasDraw)
-            renderMethod.at(0).hasStencil = false;
-    }
-
-    // clear
-    glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
-    glUseProgram(emotenodeprogram);
-    glViewport(0, 0, lim.width, lim.height);
-
-    // bm
-    float totalOpa = currOpa;
-    for (size_t i = 0; i < renderMethod.size(); i++)
-        totalOpa *= renderMethod.at(i).opa;
-    bool enableColor = false;
-    float uniformColor[4] = {0};
-    switch (currbm)
-    {
-        case 0:
-        {
-            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-            glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
-            break;
-        }
-        case 1:
-        {
-            glBlendFuncSeparate(GL_DST_COLOR, GL_ONE, GL_ZERO, GL_ONE);
-            glBlendEquation(GL_FUNC_ADD);
-            break;
-        }
-        case 3:
-        {
-            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-            glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
-            break;
-        }
-        case 4:
-        {
-            glBlendFuncSeparate(GL_DST_COLOR, GL_ONE, GL_ZERO, GL_ONE);
-            glBlendEquation(GL_FUNC_ADD);
-            break;
-        }
-        case 21:
-        {
-            enableColor = true;
-            if (frame)
-            {
-                uniformColor[0] = (frame->color & 0xFF) / 255;
-                uniformColor[1] = ((frame->color >> 8) & 0xFF) / 255;
-                uniformColor[2] = ((frame->color >> 16) & 0xFF) / 255;
-                uniformColor[3] = ((frame->color >> 24) & 0xFF) / 255;
-            }
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glBlendEquation(GL_FUNC_ADD);
-            break;
-        }
-        case 6: // TODO
-        {
-            return;
-        }
-        default:
-        {
-            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-            glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
-        }
-    }
-
-    // 上传网格数据到VBO/IBO
-    size_t vertexBytes = _meshVertices.size() * sizeof(MeshVertex);
-    size_t indexBytes = _meshIndices.size() * sizeof(uint16_t);
-
-    if (emotenodeVBO == 0)
-        glGenBuffers(1, &emotenodeVBO);
-    if (emotenodeIBO == 0)
-        glGenBuffers(1, &emotenodeIBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, emotenodeVBO);
-    if (vertexBytes > emotenodeVBOSize) {
-        glBufferData(GL_ARRAY_BUFFER, vertexBytes, _meshVertices.data(), GL_DYNAMIC_DRAW);
-        emotenodeVBOSize = vertexBytes;
-    } else {
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexBytes, _meshVertices.data());
-    }
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, emotenodeIBO);
-    if (indexBytes > emotenodeIBOSize) {
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBytes, _meshIndices.data(), GL_STATIC_DRAW);
-        emotenodeIBOSize = indexBytes;
-    } else if (_meshIndices.size() > 0) {
-        // IBO typically doesn't change if mesh division is constant; update just in case
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indexBytes, _meshIndices.data());
-    }
-
-    // 设置顶点属性
-    // aPos: location 0, vec2 (float x 2)
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), (void*)offsetof(MeshVertex, x));
-    glEnableVertexAttribArray(0);
-    // aTexCoord: location 1, vec2 (float x 2)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), (void*)offsetof(MeshVertex, u));
-    glEnableVertexAttribArray(1);
-
-    // opa
-    glUniform1f(glGetUniformLocation(emotenodeprogram, "opa"), totalOpa);
-    // texture
-    if (renderMethod.at(0).hasStencil && exFbo != 0) // 使用exTex作为蒙版过滤
-    {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ic->selftexture);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "texture1"), 0);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "enableMask"), true);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "enableColor"), false);
-        glUniform2f(glGetUniformLocation(emotenodeprogram, "viewportSize"), lim.width, lim.height);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, exTex);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "maskTexture"), 1);
-        glDrawElements(GL_TRIANGLES, (GLsizei)_meshIndices.size(), GL_UNSIGNED_SHORT, 0);
-    }
-    else
-    {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ic->selftexture);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "texture1"), 0);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "enableMask"), false);
-        glUniform1i(glGetUniformLocation(emotenodeprogram, "enableColor"), enableColor);
-        glUniform4f(glGetUniformLocation(emotenodeprogram, "uniformColor"), uniformColor[0],
-                    uniformColor[1], uniformColor[2], uniformColor[3]);
-        glDrawElements(GL_TRIANGLES, (GLsizei)_meshIndices.size(), GL_UNSIGNED_SHORT, 0);
-    }
+    // 绘制网格（MeshVertex 布局与接口的交错 xyuv 格式一致，直接传递）
+    renderer->DrawMesh((const float*)_meshVertices.data(), (int)_meshVertices.size(),
+                       _meshIndices.data(), (int)_meshIndices.size(), ic->selftexture, totalOpa);
 }
 float emotenoderef::getCurrentRenderZ()
 {
@@ -1483,7 +929,7 @@ void emotemotionref::progress(float tick, std::vector<emoteRender>& renderList, 
         }
     }
 }
-void emotemotionref::drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask)
+void emotemotionref::draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget)
 {
     if (_nodeCache.empty()) return;
 
@@ -1527,55 +973,7 @@ void emotemotionref::drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask
     {
         if (r != nullptr)
         {
-            r->drawSoftware(buf, lim, bufmask);
-        }
-    }
-}
-void emotemotionref::draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex)
-{
-    if (_nodeCache.empty()) return;
-
-    // 递归收集所有可绘制ref(展开嵌套子motion)
-    std::vector<emotenoderef*> drawList;
-    // 先展开所有的motion情形
-    std::vector<emotenoderef*> stack;
-    for (auto it = _nodeCache.begin();
-        it != _nodeCache.end(); ++it)
-    {
-        stack.push_back(&(*it));
-    }
-    // 再递归获取全部
-    while (!stack.empty())
-    {
-        emotenoderef* current = stack.back();
-        stack.pop_back();
-
-        if (current->currentMtn == nullptr)
-        {
-            drawList.push_back(current);
-        }
-        else
-        {
-            for (auto it = current->currentMtnRef->_nodeCache.begin();
-                 it != current->currentMtnRef->_nodeCache.end();
-                 ++it)
-            {
-                stack.push_back(&(*it));
-            }
-        }
-    }
-
-    // 按z排序(同dev分支)
-    std::stable_sort(drawList.begin(), drawList.end(),
-                     [](emotenoderef* a, emotenoderef* b)
-                     { return a->getCurrentRenderZ() < b->getCurrentRenderZ(); });
-
-    // 绘制
-    for (auto r : drawList)
-    {
-        if (r != nullptr)
-        {
-            r->draw(targetFbo, lim, exFbo, exTex);
+            r->draw(renderer, target, lim, maskTarget);
         }
     }
 }
@@ -1616,15 +1014,10 @@ void emoteengine::progress(float tick, std::vector<emoteRender>& renderList, emo
     // 收集shape信息
     shapeList = _mainMotionRef->getShapeList();
 }
-void emoteengine::drawSoftware(uint8_t* buf, emotelimit lim, uint8_t* bufmask)
+void emoteengine::draw(krkrsdl3::iTVPRenderBackend* renderer, void* target, emotelimit lim, void* maskTarget)
 {
     if (_mainMotionRef)
-        _mainMotionRef->drawSoftware(buf, lim, bufmask);
-}
-void emoteengine::draw(GLuint targetFbo, emotelimit lim, GLuint exFbo, GLuint exTex)
-{
-    if (_mainMotionRef)
-        _mainMotionRef->draw(targetFbo, lim, exFbo, exTex);
+        _mainMotionRef->draw(renderer, target, lim, maskTarget);
 }
 bool emoteengine::getTickByName(const std::string& name, tjs_real& retVal)
 {

@@ -166,7 +166,7 @@ public:
 
         if (pSprite != NULL)
         {
-            if (pSprite->texture.gpuTexture != 0)
+            if (pSprite->texture != nullptr)
             {
                 krkrsdl3::TVPDepartTexture(pSprite);
                 krkrsdl3::TVPDestroyTexture(pSprite);
@@ -514,7 +514,7 @@ public:
     {
         if (!tex)
             return;
-        if (pSprite->texture.gpuTexture == 0)
+        if (pSprite->texture == nullptr)
             return;
 
         {

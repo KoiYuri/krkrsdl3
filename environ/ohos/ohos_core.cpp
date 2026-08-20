@@ -110,10 +110,13 @@ void TVPInvokeMenu(int x, int y, void* _menu)
 }
 
 // ─── Software renderer texture backend (stub — OHOS uses GL) ──────
+bool TVPSoftwareRenderBackendAvailable() { return false; }
 void TVPCreateTextureBackend(TVPSprite&) {}
 void TVPRenderTextureBackend(TVPSprite*, int, int, int, int) {}
 void TVPUpdateTextureBackend(TVPSprite*, uint8_t*, int, int, int) {}
 void TVPDestroyTextureBackend(TVPSprite*) {}
+void TVPRenderClearBackend() {}
+void TVPRenderPresentBackend() {}
 
 // ─── libpng NEON stubs (compiled without ARM NEON intrinsics) ─────
 extern "C" {

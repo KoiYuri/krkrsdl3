@@ -6,15 +6,9 @@
 
 #include "tjsCommHead.h"
 #include "tjsNativeLayer.h"
-#include "TVPSettings.h"
 
 namespace emoteplayer
 {
-extern uint64_t createEmptyTexture(int width, int height);
-extern GLuint createEmptyDepthTexture(int width, int height);
-extern GLuint createFBO(GLuint texture, GLuint depthtexture);
-extern void glBaseSet();
-extern void glBaseSetWithoutClear();
 
 iTJSDispatch2* ResourceManager::_kagWindow = nullptr;
 static SeparateLayerAdaptor* _motionWorkLayer = nullptr;
@@ -215,20 +209,20 @@ void SeparateLayerAdaptor::assign(iTJSDispatch2* anotherAdaptor)
 }
 void SeparateLayerAdaptor::clear()
 {
-    if (TVPSettings.renderer == "opengl")
+    // 渲染目标由 core/render 的 2D 渲染器统一管理
+    krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+    if (renderer)
     {
-        if (fbotexture != 0 && glIsTexture(fbotexture) == GL_TRUE)
-            glDeleteTextures(1, &fbotexture);
-        if (fbodepthtexture != 0 && glIsTexture(fbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &fbodepthtexture);
-        if (superfbotexture != 0 && glIsTexture(superfbotexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbotexture);
-        if (superfbodepthtexture != 0 && glIsTexture(superfbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbodepthtexture);
-        if (fbo != 0 || glIsFramebuffer(fbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &fbo);
-        if (superfbo != 0 || glIsFramebuffer(superfbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &superfbo);
+        if (target)
+        {
+            renderer->DestroyTarget(target);
+            target = nullptr;
+        }
+        if (maskTarget)
+        {
+            renderer->DestroyTarget(maskTarget);
+            maskTarget = nullptr;
+        }
     }
     if (_this != nullptr)
     {
@@ -278,63 +272,26 @@ void SeparateLayerAdaptor::set_parent(tTJSVariant v)
 }
 void SeparateLayerAdaptor::checkDrawArea(tjs_int width, tjs_int height)
 {
-    // fbo
-    if (fbo == 0 || glIsFramebuffer(fbo) != GL_TRUE)
-        glGenFramebuffers(1, &fbo);
-    if (superfbo == 0 || glIsFramebuffer(superfbo) != GL_TRUE)
-        glGenFramebuffers(1, &superfbo);
-
-    // 基础fbo
-    if (_width != width || _height != height)
+    // 通过 2D 渲染器创建/重建渲染目标（GL 后端= FBO，软渲染后端= CPU 缓冲）
+    if (target == nullptr || _width != width || _height != height)
     {
+        krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+        if (!renderer)
+            return;
+        if (target)
+        {
+            renderer->DestroyTarget(target);
+            target = nullptr;
+        }
+        if (maskTarget)
+        {
+            renderer->DestroyTarget(maskTarget);
+            maskTarget = nullptr;
+        }
         _width = width;
         _height = height;
-        // 材质
-        GLuint newfbotexture = createEmptyTexture(width, height);
-        GLuint newfbodepthtexture = createEmptyDepthTexture(width, height);
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, newfbotexture,
-                               0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                               newfbodepthtexture, 0);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        {
-            TVPConsoleLog("Framebuffer不完整!");
-        }
-        // 模板fbo
-        GLuint newsuperfbotexture = createEmptyTexture(width, height);
-        GLuint newsuperfbodepthtexture = createEmptyDepthTexture(width, height);
-        glBindFramebuffer(GL_FRAMEBUFFER, superfbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                               newsuperfbotexture, 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                               newsuperfbodepthtexture, 0);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        {
-            TVPConsoleLog("Framebuffer不完整!");
-        }
-        // 清理旧物
-        if (fbotexture != 0 && glIsTexture(fbotexture) == GL_TRUE)
-        {
-            glDeleteTextures(1, &fbotexture);
-        }
-        if (fbodepthtexture != 0 && glIsTexture(fbodepthtexture) == GL_TRUE)
-        {
-            glDeleteTextures(1, &fbodepthtexture);
-        }
-        if (superfbotexture != 0 && glIsTexture(superfbotexture) == GL_TRUE)
-        {
-            glDeleteTextures(1, &superfbotexture);
-        }
-        if (superfbodepthtexture != 0 && glIsTexture(superfbodepthtexture) == GL_TRUE)
-        {
-            glDeleteTextures(1, &superfbodepthtexture);
-        }
-        // 赋予魔法
-        fbotexture = newfbotexture;
-        fbodepthtexture = newfbodepthtexture;
-        superfbotexture = newsuperfbotexture;
-        superfbodepthtexture = newsuperfbodepthtexture;
+        target = renderer->CreateTarget(width, height);
+        maskTarget = renderer->CreateTarget(width, height); // 蒙版目标（与主体同尺寸）
     }
 }
 
@@ -546,27 +503,21 @@ tjs_uint32 TmpMotionObj::ClassID = (tjs_uint32)-1;
 #define getprop(d, p) getprop_t(d, p, )
 EmotePlayer::~EmotePlayer()
 {
-    if (TVPSettings.renderer == "opengl")
+    // 渲染目标由 core/render 的 2D 渲染器统一管理
+    krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+    if (renderer)
     {
-        if (fbotexture != 0 && glIsTexture(fbotexture) == GL_TRUE)
-            glDeleteTextures(1, &fbotexture);
-        if (fbodepthtexture != 0 && glIsTexture(fbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &fbodepthtexture);
-        if (superfbotexture != 0 && glIsTexture(superfbotexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbotexture);
-        if (superfbodepthtexture != 0 && glIsTexture(superfbodepthtexture) == GL_TRUE)
-            glDeleteTextures(1, &superfbodepthtexture);
-        if (fbo != 0 || glIsFramebuffer(fbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &fbo);
-        if (superfbo != 0 || glIsFramebuffer(superfbo) == GL_TRUE)
-            glDeleteFramebuffers(1, &superfbo);
+        if (_target)
+        {
+            renderer->DestroyTarget(_target);
+            _target = nullptr;
+        }
+        if (_maskTarget)
+        {
+            renderer->DestroyTarget(_maskTarget);
+            _maskTarget = nullptr;
+        }
     }
-    if (m_BmpBits != nullptr)
-        delete (tTVPBaseTexture*)m_BmpBits;
-    if (m_bmpData != nullptr)
-        delete[] m_bmpData;
-    if (m_bmpDataMask != nullptr)
-        delete[] m_bmpDataMask;
 }
 int32_t EmotePlayer::get_loopTime()
 {
@@ -730,17 +681,16 @@ void EmotePlayer::clear(iTJSDispatch2* layer, tjs_uint32 neutralColor)
     if (ths == NULL)
         return;
 
-    if (TVPSettings.renderer == "opengl")
+    // 清屏统一走 2D 渲染器（GL 后端清 FBO，软渲染后端清 CPU 缓冲）
+    krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+    if (renderer)
     {
-        if (withoutAdaptor)
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        else if (self && self->fbo)
-            glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-    else
-    {
-        std::memset(m_bmpData, 0, (size_t)_width * _height * 4);
+        void* target = withoutAdaptor ? _target : (self ? self->target : nullptr);
+        if (target)
+        {
+            renderer->SetTarget(target);
+            renderer->ClearTarget(true);
+        }
     }
 }
 void EmotePlayer::progress(tjs_real mstime)
@@ -819,47 +769,39 @@ void EmotePlayer::draw(iTJSDispatch2* objthis)
     if (emtEngine._mainfile != nullptr && emtEngine._mainmotion != nullptr)
     {
         ResetDrawArea(ths->GetWidth(), ths->GetHeight());
-        if (TVPSettings.renderer == "opengl")
+        // 渲染统一走 core/render 的 2D 渲染抽象（GL/软渲染选择在 core 内部完成）
+        krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+        if (!renderer)
+            return;
+        void* target = nullptr;
+        void* maskTarget = nullptr;
+        if (withoutAdaptor)
         {
-            if (withoutAdaptor)
-                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-            else
-            {
-                self->checkDrawArea(ths->GetWidth(), ths->GetHeight());
-                glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
-            }
-            glBaseSetWithoutClear();
-            if (isSelfClear)
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            else
-                glClear(GL_DEPTH_BUFFER_BIT);
-            // 使用emoteengine::draw进行绘制(使用progress阶段缓存的独立ref树)
-            if (withoutAdaptor)
-                emtEngine.draw(fbo, _limitArea, superfbo, superfbotexture);
-            else
-                emtEngine.draw(self->fbo, _limitArea, self->superfbo, self->superfbotexture);
-            if (m_bmpData != nullptr && m_BmpBits != nullptr)
-            {
-                // read
-                glReadPixels(0, 0, _width, _height, GL_RGBA, GL_UNSIGNED_BYTE, m_bmpData);
-                tjs_uint8* buff = (tjs_uint8*)ths->GetMainImagePixelBufferForWrite();
-                if (buff)
-                    std::memcpy(buff, m_bmpData, _width * _height * 4);
-                ths->Update();
-            }
+            target = _target;
+            maskTarget = _maskTarget;
         }
         else
         {
-            if (m_bmpData != nullptr && m_BmpBits != nullptr)
-            {
-                std::memset(m_bmpData, 0, (size_t)_width * _height * 4);
-                emtEngine.drawSoftware(m_bmpData, _limitArea, m_bmpDataMask);
-                tjs_uint8* buff = (tjs_uint8*)ths->GetMainImagePixelBufferForWrite();
-                if (buff)
-                    std::memcpy(buff, m_bmpData, (size_t)_width * _height * 4);
-                ths->Update();
-            }
+            self->checkDrawArea(ths->GetWidth(), ths->GetHeight());
+            target = self->target;
+            maskTarget = self->maskTarget;
         }
+        if (!target || !maskTarget)
+            return;
+
+        renderer->SetTarget(target);
+        // isSelfClear: 自主清屏模式；否则由脚本 clear() 完成清屏
+        renderer->ClearTarget(isSelfClear);
+        // 使用emoteengine::draw进行绘制(使用progress阶段缓存的独立ref树)
+        emtEngine.draw(renderer, target, _limitArea, maskTarget);
+        // 回读 CPU 像素并交给图层（GL 后端经 glReadPixels，软渲染后端零拷贝）
+        int pitch = 0;
+        uint8_t* pixels = renderer->LockTarget(target, pitch);
+        tjs_uint8* buff = (tjs_uint8*)ths->GetMainImagePixelBufferForWrite();
+        if (buff && pixels)
+            std::memcpy(buff, pixels, (size_t)_width * _height * 4);
+        renderer->UnlockTarget(target);
+        ths->Update();
     }
 }
 void EmotePlayer::assign(iTJSDispatch2* anotherAdaptor)
@@ -1237,60 +1179,6 @@ void EmotePlayer::setZoom(tjs_real x, tjs_real y)
     currZy = y;
     updateTransMat();
 }
-void EmotePlayer::setOpenGLDrawArea(tjs_int width, tjs_int height)
-{
-    // fbo
-    if (fbo == 0 || glIsFramebuffer(fbo) != GL_TRUE)
-        glGenFramebuffers(1, &fbo);
-    if (superfbo == 0 || glIsFramebuffer(superfbo) != GL_TRUE)
-        glGenFramebuffers(1, &superfbo);
-
-    // 材质
-    GLuint newfbotexture = createEmptyTexture(width, height);
-    GLuint newfbodepthtexture = createEmptyDepthTexture(width, height);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, newfbotexture, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, newfbodepthtexture,
-                           0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        TVPConsoleLog("Framebuffer不完整!");
-    }
-    // 模板fbo
-    GLuint newsuperfbotexture = createEmptyTexture(width, height);
-    GLuint newsuperfbodepthtexture = createEmptyDepthTexture(width, height);
-    glBindFramebuffer(GL_FRAMEBUFFER, superfbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, newsuperfbotexture,
-                           0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                           newsuperfbodepthtexture, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        TVPConsoleLog("Framebuffer不完整!");
-    }
-    // 清理旧物
-    if (fbotexture != 0 && glIsTexture(fbotexture) == GL_TRUE)
-    {
-        glDeleteTextures(1, &fbotexture);
-    }
-    if (fbodepthtexture != 0 && glIsTexture(fbodepthtexture) == GL_TRUE)
-    {
-        glDeleteTextures(1, &fbodepthtexture);
-    }
-    if (superfbotexture != 0 && glIsTexture(superfbotexture) == GL_TRUE)
-    {
-        glDeleteTextures(1, &superfbotexture);
-    }
-    if (superfbodepthtexture != 0 && glIsTexture(superfbodepthtexture) == GL_TRUE)
-    {
-        glDeleteTextures(1, &superfbodepthtexture);
-    }
-    // 赋予魔法
-    fbotexture = newfbotexture;
-    fbodepthtexture = newfbodepthtexture;
-    superfbotexture = newsuperfbotexture;
-    superfbodepthtexture = newsuperfbodepthtexture;
-}
 void EmotePlayer::updateTransMat()
 {
     _renderMethod.type = 3;
@@ -1323,24 +1211,24 @@ void EmotePlayer::ResetDrawArea(tjs_int width, tjs_int height)
         }
         if (_limitArea.zMax < 30.0f)
             _limitArea.zMax = 30.0f;
-        // bitmap
-        if (m_BmpBits != nullptr)
-            delete (tTVPBaseTexture*)m_BmpBits;
-        m_BmpBits = new tTVPBaseTexture(_width, _height, 32);
-        if (m_bmpData != nullptr)
-            delete[] m_bmpData;
-        m_bmpData = new tjs_uint8[_width * _height * 4];
         // transForm
         updateTransMat();
-        // setopengl
-        if (TVPSettings.renderer == "opengl" && withoutAdaptor)
-            setOpenGLDrawArea(_width, _height);
-        else
+        // 渲染目标（主体 + 蒙版）由 core/render 的 2D 渲染器统一管理
+        krkrsdl3::iTVPRenderBackend* renderer = krkrsdl3::TVPGetRenderBackend();
+        if (renderer)
         {
-            // 创建蒙版遮罩用于软渲染
-            if (m_bmpDataMask != nullptr)
-                delete[] m_bmpDataMask;
-            m_bmpDataMask = new tjs_uint8[_width * _height * 4];
+            if (_target)
+            {
+                renderer->DestroyTarget(_target);
+                _target = nullptr;
+            }
+            if (_maskTarget)
+            {
+                renderer->DestroyTarget(_maskTarget);
+                _maskTarget = nullptr;
+            }
+            _target = renderer->CreateTarget(_width, _height);
+            _maskTarget = renderer->CreateTarget(_width, _height);
         }
     }
 }

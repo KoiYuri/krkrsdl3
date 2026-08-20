@@ -268,41 +268,40 @@ public:
 // tTJSObjectPool
 //---------------------------------------------------------------------------
 template<typename T>
-class tTJSObjectPool
+class tTJSObjectPool // 线程安全要不要考虑？
 {
     std::vector<T*> m_entries;
     std::vector<size_t> m_freeSlots;
 
 public:
-    void registerObject(T* obj)
+    // 调用方需要记录index，使用index加速删除，否则严重影响擦写性能
+    size_t registerObject(T* obj)
     {
         if (!obj)
-            return;
+            return (size_t)-1;
 
+        size_t index;
         if (m_freeSlots.empty())
+        {
+            index = m_entries.size();
             m_entries.push_back(obj);
+        }
         else
         {
-            size_t index = m_freeSlots.back();
+            index = m_freeSlots.back();
             m_freeSlots.pop_back();
             m_entries[index] = obj;
         }
+        return index;
     }
 
-    void unregisterObject(T* obj)
+    void unregisterObject(size_t index)
     {
-        if (!obj)
+        if (index == (size_t)-1 || index >= m_entries.size() || m_entries[index] == nullptr)
             return;
 
-        for (size_t i = 0; i < m_entries.size(); ++i)
-        {
-            if (m_entries[i] == obj)
-            {
-                m_entries[i] = nullptr;
-                m_freeSlots.push_back(i);
-                break;
-            }
-        }
+        m_entries[index] = nullptr;
+        m_freeSlots.push_back(index);
     }
 
     void clear()

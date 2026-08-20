@@ -3,6 +3,7 @@
 #include "Platform.h"
 #include "TVPApplication.h"
 #include "UtilStreams.h"
+#include "PlatformVideo.h"
 
 #include <sys/utsname.h>
 #include <fstream>
@@ -95,3 +96,16 @@ void TVPInvokeMenu(int x, int y, void* _menu)
 
 }
 //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+// Linux 没有系统视频播放器实现（视频走 FFmpeg/wuffmpeg 插件路径）
+// 返回 nullptr，调用方会回退到 NullLayerPlayer / NullOverlayPlayer
+// （见 krmovie.cpp TryCreateLayer / TryCreateOverlay）
+//---------------------------------------------------------------------------
+LayerVideoPlayer* CreateLayerVideoPlayer(TVPVideoEventCallback /*cb*/, void* /*cbctx*/)
+{
+    return nullptr;
+}
+OverlayVideoPlayer* CreateOverlayVideoPlayer(TVPVideoEventCallback /*cb*/, void* /*cbctx*/)
+{
+    return nullptr;
+}

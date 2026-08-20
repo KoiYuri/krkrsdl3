@@ -10,6 +10,8 @@
 #include "TVPSettings.h"
 #include "TVPCompositor.h"
 
+#include "backend/GLRenderBackend.h"
+
 #include <EGL/egl.h>
 #include <hilog/log.h>
 #include <napi/native_api.h>
@@ -60,6 +62,7 @@ static void* RenderThreadProc(void* data)
     g_eglContext = eglCreateContext(g_eglDisplay, cfg, EGL_NO_CONTEXT, ctxAttrs);
     eglMakeCurrent(g_eglDisplay, g_eglSurface, g_eglSurface, g_eglContext);
     eglSwapInterval(g_eglDisplay, 1);
+    krkrsdl3::TVPSetRenderBackend(new krkrsdl3::GLRenderBackend());
     krkrsdl3::fetchGLInfo();
     g_surfaceReady = true;
     OH_LOG_INFO(LOG_APP, "EGL ready on render thread");
@@ -80,8 +83,8 @@ static void* RenderThreadProc(void* data)
     while (g_running) {
         if(!::Application->Run())
             break;
+        // 合成器完成渲染（清屏/绘制/呈现全部由当前渲染后端负责）
         krkrsdl3::TVPRenderOnce(winWidth, winHeight);
-        eglSwapBuffers(g_eglDisplay, g_eglSurface);
     }
     
     ::Application->OnExit();
@@ -266,8 +269,8 @@ int TVPDrawSceneOnce(int interval) {
         eglMakeCurrent(g_eglDisplay, g_eglSurface, g_eglSurface, g_eglContext);
         ::Application->Run();
         iTVPTexture2D::RecycleProcess();
+        // 合成器完成渲染（清屏/绘制/呈现全部由当前渲染后端负责）
         krkrsdl3::TVPRenderOnce(winWidth, winHeight);
-        eglSwapBuffers(g_eglDisplay, g_eglSurface);
         lastTick = curTick;
         return 0;
         }
@@ -278,3 +281,10 @@ int TVPDrawSceneOnce(int interval) {
 }
 std::vector<std::string> TVPListAllRenderBackend() { return {"opengl"}; }
 int TVPConvertKeyCodeToVKCode(int k) { return k; }
+
+// GL 呈现钩子（eglSwapBuffers），由 GLRenderBackend 调用
+// （软渲染平台钩子为空实现，见 ohos_core.cpp；OHOS 无软渲染路径）
+void TVPSwapBuffersBackend()
+{
+    eglSwapBuffers(g_eglDisplay, g_eglSurface);
+}

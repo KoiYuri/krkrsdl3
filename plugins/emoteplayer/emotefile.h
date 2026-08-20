@@ -5,16 +5,12 @@
 #include <string>
 #include <random>
 
-#if _KRKRSDL3_GL
-#include <glad/glad.h>
-#else
-#include <GLES3/gl3.h>
-#endif
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "psbfile/PSBData.h"
+#include "TVPCompositor.h"
 
 namespace emoteplayer
 {
@@ -391,8 +387,8 @@ public:
     double texWidth = 0;
     double texHeight = 0;
 
-    uint8_t* data = nullptr; // icon数据
-    uint64_t selftexture = 0;  // 图片纹理
+    uint8_t* data = nullptr; // icon数据（RGBA，统一字节序）
+    void* selftexture = nullptr; // 纹理句柄（由 core/render 的 2D 渲染器管理）
 
 private:
     emotefile* _filePtr = nullptr;

@@ -85,14 +85,10 @@ public:
     void set_parent(tTJSVariant v);
     tTJSNI_Layer* GetLayer() { return _this; };
 
-    // canvas
+    // canvas（渲染目标句柄，由 core/render 的 2D 渲染器管理）
     void checkDrawArea(tjs_int width, tjs_int height);
-    GLuint fbo = 0;
-    GLuint fbotexture = 0;
-    GLuint fbodepthtexture = 0;
-    GLuint superfbo = 0;
-    GLuint superfbotexture = 0;
-    GLuint superfbodepthtexture = 0;
+    void* target = nullptr;
+    void* maskTarget = nullptr;
     tjs_int _width = 0, _height = 0;
 
 private:
@@ -202,19 +198,11 @@ private:
     tjs_real speedRatio = 20.0;
     bool isSelfClear = false; // true:draw使用完全copy(以实现自主clear) false:通过clear函数间接完成
                               // 其分别对应了两种emote的运行模式
-    // data
-    void* m_BmpBits = nullptr;
-    tjs_uint8* m_bmpData = nullptr;
-    tjs_uint8* m_bmpDataMask = nullptr;
-    // canvas
+    // canvas（渲染目标句柄，由 core/render 的 2D 渲染器管理）
+    void* _target = nullptr;
+    void* _maskTarget = nullptr;
     bool withoutAdaptor = false;
-    void setOpenGLDrawArea(tjs_int width, tjs_int height);
-    GLuint fbo = 0;
-    GLuint fbotexture = 0;
-    GLuint fbodepthtexture = 0;
-    GLuint superfbo = 0;
-    GLuint superfbotexture = 0;
-    GLuint superfbodepthtexture = 0;
+    void resetTargetArea(tjs_int width, tjs_int height);
     // transform
     void updateTransMat();
     void ResetDrawArea(tjs_int width, tjs_int height);

@@ -39,6 +39,7 @@ int yyparse(void*);
 tTJSScriptBlock::tTJSScriptBlock(tTJS* owner)
 {
     RefCount = 1;
+    GCIndex = (tjs_size)-1;
     Owner = owner;
 
     Script = NULL;
@@ -53,7 +54,7 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner)
     LineOffset = 0;
 
     Owner->AddScriptBlock(this);
-    _allTJSScriptBlock.registerObject(this);
+    this->GCIndex = _allTJSScriptBlock.registerObject(this);
 }
 //---------------------------------------------------------------------------
 // for Bytecode
@@ -77,7 +78,7 @@ tTJSScriptBlock::tTJSScriptBlock(tTJS* owner, const tjs_char* name, tjs_int line
     UsingPreProcessor = false;
 
     Owner->AddScriptBlock(this);
-    _allTJSScriptBlock.registerObject(this);
+    this->GCIndex = _allTJSScriptBlock.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSScriptBlock::~tTJSScriptBlock()
@@ -102,7 +103,7 @@ tTJSScriptBlock::~tTJSScriptBlock()
 
     if (!_tjsForceShutdown)
     {
-        _allTJSScriptBlock.unregisterObject(this);
+        _allTJSScriptBlock.unregisterObject(this->GCIndex);
     }
 }
 //---------------------------------------------------------------------------

@@ -104,6 +104,7 @@ tTJSDispatch::tTJSDispatch()
 {
     BeforeDestructionCalled = false;
     RefCount = 1;
+    GCIndex = (tjs_size)-1;
 #ifdef TVP_IN_PLUGIN_STUB // TVP plug-in support
     TVPPluginGlobalRefCount++;
 #endif
@@ -388,7 +389,7 @@ tTJSCustomObject::tTJSCustomObject(tjs_int hashbits)
     missing_name = MissingName;
     for (tjs_int i = 0; i < TJS_MAX_NATIVE_CLASS; i++)
         ClassIDs[i] = (tjs_int32)-1;
-    _allTJSObjects.registerObject(this);
+    this->GCIndex = _allTJSObjects.registerObject(this);
 }
 //---------------------------------------------------------------------------
 tTJSCustomObject::~tTJSCustomObject()
@@ -441,7 +442,7 @@ tTJSCustomObject::~tTJSCustomObject()
 
     if (!_tjsForceShutdown)
     {
-        _allTJSObjects.unregisterObject(this);
+        _allTJSObjects.unregisterObject(this->GCIndex);
     }
 }
 //---------------------------------------------------------------------------
